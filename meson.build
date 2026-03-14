@@ -1,7 +1,7 @@
 project(
   'tickms',
   'c',
-  version: '0.2.0',
+  version: '1.2.1',
   default_options: [
     'c_std=c11',
     'warning_level=3',
@@ -42,7 +42,7 @@ tickms_lib = static_library(
   install: true,
 )
 
-install_headers('include/tickms.h', subdir: 'tickms')
+install_headers('include/tickms.h', 'include/tickms_conf.h', subdir: 'tickms')
 
 tickms_dep = declare_dependency(
   include_directories: [public_headers, generated_headers],
@@ -58,7 +58,6 @@ pkg.generate(
   description: project_description,
   filebase: 'tickms',
   name: 'tickms',
-  subdirs: 'tickms',
 )
 
 if get_option('build_tests')

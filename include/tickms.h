@@ -1,9 +1,9 @@
 /**
  * @file
- *    timer.h
+ *    tickms.h
  *
  * @brief
- *    Hardware-agnostic timer module with configurable tick period.
+ *    Hardware-agnostic tick-based timer module with configurable tick period.
  *
  * @details
  *    This module provides a configurable tick-based timer system for time
@@ -15,8 +15,15 @@
  *    - Configurable tick period (1-1000 ms)
  *    - Wrap-safe elapsed time calculations
  *    - Time conversion utilities (ms, us, seconds)
- *    - Timer start/reset/expiry checking
+ *    - Tick-based timer start/reset/expiry checking
  *    - Producer-side tick update helpers
+ *
+ *    Concurrency contract:
+ *    - One application-defined producer context should advance or set ticks,
+ *      or all writer calls must be externally serialized.
+ *    - Readers may call query helpers concurrently with the producer.
+ *    - Atomic operations protect the tick counter value itself; they do not
+ *      impose ordering on unrelated shared application state.
  *
  *    This module is designed with MISRA C:2012 and IEC-61508 in mind:
  *    - Consistent use of fixed-width types
@@ -26,12 +33,12 @@
  *
  *   Example (set tick period to 1 ms):
  *   ----------------------------------
- *   #define TIMER_MS_PER_TICK 1u
- *   #include "timer.h"
+ *   #define TICKMS_MS_PER_TICK 1u
+ *   #include "tickms.h"
  *
  * @note
- *   Define **TIMER_MS_PER_TICK** *before* including this file to tailor the
- *   tick period to your application; otherwise it defaults to 10 ms.
+ *   Configure **TICKMS_MS_PER_TICK** before including this file, either
+ *   directly or via **tickms_conf.h**; otherwise it defaults to 10 ms.
  *
  */
 #ifndef TICKMS_H_
@@ -48,83 +55,76 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+/* Include configuration header first */
+#include "tickms_conf.h"
+
 /* ================ DEFINES ================================================= */
 
 /* ---------------- Configuration ------------------------------------------- */
 
-#ifndef TIMER_MS_PER_TICK
-/**
- * @def TIMER_MS_PER_TICK
- * @brief Duration of one timer tick (in milliseconds).
- *
- * @details
- *    Override this macro *before* including @ref timer.h if your project
- *    needs a different tick period. Typical values are 1, 5, 10, 20 ms, etc.
- */
-#define TIMER_MS_PER_TICK (10u)
-#endif
+/* TICKMS_MS_PER_TICK is configured via tickms_conf.h. */
 
-#if TIMER_MS_PER_TICK == 0u
-#error "TIMER_MS_PER_TICK must be > 0"
+#if TICKMS_MS_PER_TICK == 0u
+#error "TICKMS_MS_PER_TICK must be > 0"
 #endif
 
 /**
- * @def TIMER_MS_PER_SEC
+ * @def TICKMS_MS_PER_SEC
  * @brief The number of ms in a second.
  */
-#define TIMER_MS_PER_SEC    (1000u)
+#define TICKMS_MS_PER_SEC    (1000u)
 
 /**
- * @def TIMER_TICK_RATE_MIN
- * @brief The minimum allowable timer tick rate.
+ * @def TICKMS_TICK_RATE_MIN
+ * @brief The minimum allowable tick rate.
  */
-#define TIMER_TICK_RATE_MIN (1u)
+#define TICKMS_TICK_RATE_MIN (1u)
 
 /**
- * @def TIMER_TICK_RATE_MAX
- * @brief The maximum allowable timer tick rate.
+ * @def TICKMS_TICK_RATE_MAX
+ * @brief The maximum allowable tick rate.
  */
-#define TIMER_TICK_RATE_MAX (1000u)
+#define TICKMS_TICK_RATE_MAX (1000u)
 
 /**
- * @def TIMER_TICKS_PER_SEC
- * @brief Number of timer ticks per second (integer, truncated).
+ * @def TICKMS_TICKS_PER_SEC
+ * @brief Number of ticks per second (integer, truncated).
  */
-#define TIMER_TICKS_PER_SEC (TIMER_MS_PER_SEC / TIMER_MS_PER_TICK)
+#define TICKMS_TICKS_PER_SEC (TICKMS_MS_PER_SEC / TICKMS_MS_PER_TICK)
 
 /* ---------------- Compile-time assertions --------------------------------- */
 
 /* Tick period must be between 1 and 1000 ms */
-_Static_assert(TIMER_MS_PER_TICK >= TIMER_TICK_RATE_MIN
-                   && TIMER_MS_PER_TICK <= TIMER_TICK_RATE_MAX,
-               "TIMER_MS_PER_TICK must be in [1,1000]");
+_Static_assert(TICKMS_MS_PER_TICK >= TICKMS_TICK_RATE_MIN
+                   && TICKMS_MS_PER_TICK <= TICKMS_TICK_RATE_MAX,
+               "TICKMS_MS_PER_TICK must be in [1,1000]");
 
 /* Tick period must divide 1000 cleanly for integer conversions */
 _Static_assert(
-    (TIMER_TICK_RATE_MAX % TIMER_MS_PER_TICK) == 0u,
-    "TIMER_MS_PER_TICK must divide 1000 (integer conversions rely on it)");
+    (TICKMS_TICK_RATE_MAX % TICKMS_MS_PER_TICK) == 0u,
+    "TICKMS_MS_PER_TICK must divide 1000 (integer conversions rely on it)");
 
-_Static_assert(TIMER_TICKS_PER_SEC != 0u,
-               "TIMER_TICKS_PER_SEC computed to 0; fix TIMER_MS_PER_TICK");
+_Static_assert(TICKMS_TICKS_PER_SEC != 0u,
+               "TICKMS_TICKS_PER_SEC computed to 0; fix TICKMS_MS_PER_TICK");
 
 /* ================ STRUCTURES ============================================== */
 
 /* ================ TYPEDEFS ================================================ */
 
 /**
- * @brief Timer tick count type.
+ * @brief Tick count type.
  *
  * @details
  *    This is an alias for uint32_t, representing the number of ticks
- *    elapsed since an arbitrary epoch. It is used throughout the timer
+ *    elapsed since an arbitrary epoch. It is used throughout the tickms
  *    module for all time-related calculations.
  */
-typedef uint32_t timer_tick_t;
+typedef uint32_t tickms_tick_t;
 
 /* ================ MACROS ================================================== */
 
 /**
- * @def TIMER_MS_TO_TICKS(ms)
+ * @def TICKMS_MS_TO_TICKS(ms)
  * @brief Convert a time expressed in milliseconds to the corresponding number
  *        of ticks, rounding up.
  *
@@ -134,11 +134,12 @@ typedef uint32_t timer_tick_t;
  * @note Prefer the corresponding inline helper for runtime values when
  *       overflow handling must be explicit.
  */
-#define TIMER_MS_TO_TICKS(ms)                                                  \
-        ((timer_tick_t)(((ms) + (TIMER_MS_PER_TICK - 1u)) / TIMER_MS_PER_TICK))
+#define TICKMS_MS_TO_TICKS(ms)                                                 \
+        ((tickms_tick_t)(((ms) + (TICKMS_MS_PER_TICK - 1u))                    \
+                         / TICKMS_MS_PER_TICK))
 
 /**
- * @def TIMER_SEC_TO_TICKS(sec)
+ * @def TICKMS_SEC_TO_TICKS(sec)
  * @brief Convert seconds to ticks (integer, truncating fractional part).
  *
  * @param sec       Time in seconds.
@@ -147,101 +148,122 @@ typedef uint32_t timer_tick_t;
  * @note Prefer the corresponding inline helper for runtime values when
  *       overflow handling must be explicit.
  */
-#define TIMER_SEC_TO_TICKS(sec)  ((timer_tick_t)((sec) * TIMER_TICKS_PER_SEC))
+#define TICKMS_SEC_TO_TICKS(sec)  ((tickms_tick_t)((sec) * TICKMS_TICKS_PER_SEC))
 
 /**
- * @def TIMER_SEC_TO_MS(sec)
+ * @def TICKMS_SEC_TO_MS(sec)
  * @brief Convert seconds to milliseconds (integer, truncating fractional part).
  *
  * @param sec       Time in seconds.
  * @return          Milliseconds.
  */
-#define TIMER_SEC_TO_MS(sec)     ((uint32_t)((sec) * TIMER_MS_PER_SEC))
+#define TICKMS_SEC_TO_MS(sec)     ((uint32_t)((sec) * TICKMS_MS_PER_SEC))
 
 /**
- * @def TIMER_SEC_TO_US(sec)
+ * @def TICKMS_SEC_TO_US(sec)
  * @brief Convert seconds to microseconds (64-bit integer).
  *
  * @param sec       Time in seconds.
  * @return          Microseconds.
  */
-#define TIMER_SEC_TO_US(sec)     ((uint64_t)((sec) * 1000000ull))
+#define TICKMS_SEC_TO_US(sec)     ((uint64_t)((sec) * 1000000ull))
 
 /**
- * @def TIMER_TICKS_TO_MS(ticks)
+ * @def TICKMS_TICKS_TO_MS(ticks)
  * @brief Convert ticks to milliseconds.
  *
  * @param ticks     Number of ticks.
  * @return          Milliseconds.
  */
-#define TIMER_TICKS_TO_MS(ticks) ((uint32_t)((ticks) * (TIMER_MS_PER_TICK)))
+#define TICKMS_TICKS_TO_MS(ticks) ((uint32_t)((ticks) * (TICKMS_MS_PER_TICK)))
 
 /**
- * @def TIMER_TICKS_TO_US(ticks)
+ * @def TICKMS_TICKS_TO_US(ticks)
  * @brief Convert ticks to microseconds.
  *
  * @param ticks     Number of ticks.
  * @return          Microseconds.
  */
-#define TIMER_TICKS_TO_US(ticks)                                               \
-        ((uint64_t)((ticks) * (uint64_t)(TIMER_MS_PER_TICK) * 1000ull))
+#define TICKMS_TICKS_TO_US(ticks)                                              \
+        ((uint64_t)((ticks) * (uint64_t)(TICKMS_MS_PER_TICK) * 1000ull))
 
 /* ================ GLOBAL VARIABLES ======================================== */
 
 /* ================ GLOBAL PROTOTYPES ======================================= */
 
 /**
- * @brief Initialize the timer module.
+ * @brief Initialize the tickms module.
  *
  * @details
  *    Sets the initial value of the tick counter. This should be called
  *    once during system initialization.
  *
+ * @pre
+ *    Call before concurrent readers or writers begin using the module, or
+ *    externally serialize the call against all other tickms operations.
+ *
  * @param initial_ticks  Initial tick count value.
  */
-void timer_init(timer_tick_t initial_ticks);
+void tickms_init(tickms_tick_t initial_ticks);
 
 /**
  * @brief Set the current tick count.
  *
  * @details
  *    Updates the global tick counter to a specified value. This is useful
- *    for synchronizing the timer with an external time source or for
+ *    for synchronizing the tickms with an external time source or for
  *    testing purposes.
+ *
+ * @warning
+ *    Treat this as a writer operation. Do not mix calls to tickms_set_ticks,
+ *    tickms_tick_increment, and tickms_tick_advance from multiple contexts
+ *    unless your application serializes them externally.
  *
  * @param ticks  New tick count value.
  */
-void timer_set_ticks(timer_tick_t ticks);
+void tickms_set_ticks(tickms_tick_t ticks);
 
 /**
  * @brief Get the current tick count.
  *
+ * @note
+ *    This is an atomic snapshot of the counter value only. It does not imply
+ *    ordering for unrelated shared application data.
+ *
  * @return Current tick count.
  */
-timer_tick_t timer_get_ticks(void);
+tickms_tick_t tickms_get_ticks(void);
 
 /**
  * @brief Advance the global tick count by one tick.
  *
+ * @pre
+ *    The application provides a single producer for tick advancement, or it
+ *    externally serializes all writer operations.
+ *
  * @return The updated tick count after the increment.
  */
-timer_tick_t timer_tick_increment(void);
+tickms_tick_t tickms_tick_increment(void);
 
 /**
  * @brief Advance the global tick count by an arbitrary delta.
+ *
+ * @pre
+ *    The application provides a single producer for tick advancement, or it
+ *    externally serializes all writer operations.
  *
  * @param delta  Number of ticks to add.
  *
  * @return The updated tick count after the increment.
  */
-timer_tick_t timer_tick_advance(timer_tick_t delta);
+tickms_tick_t tickms_tick_advance(tickms_tick_t delta);
 
 /**
  * @brief Get elapsed time in milliseconds since a start tick.
  *
  * @details
  *    This function calculates the elapsed time in milliseconds between
- *    a start tick and the current tick count. It handles timer wrap-around
+ *    a start tick and the current tick count. It handles wrap-around
  *    correctly.
  *
  * @param start_ticks  The recorded start tick.
@@ -249,12 +271,12 @@ timer_tick_t timer_tick_advance(timer_tick_t delta);
  * @return             Elapsed time in milliseconds, saturated at UINT32_MAX.
  */
 static inline uint32_t
-timer_elapsed_ms(timer_tick_t start_ticks)
+tickms_elapsed_ms(tickms_tick_t start_ticks)
 {
-        const timer_tick_t current = timer_get_ticks();
-        const timer_tick_t elapsed_ticks = current - start_ticks;
+        const tickms_tick_t current = tickms_get_ticks();
+        const tickms_tick_t elapsed_ticks = current - start_ticks;
         const uint64_t ms =
-            (uint64_t)elapsed_ticks * (uint64_t)TIMER_MS_PER_TICK;
+            (uint64_t)elapsed_ticks * (uint64_t)TICKMS_MS_PER_TICK;
         return (ms > (uint64_t)UINT32_MAX) ? UINT32_MAX : (uint32_t)ms;
 }
 
@@ -263,7 +285,7 @@ timer_elapsed_ms(timer_tick_t start_ticks)
  *
  * @details
  *    This function calculates the elapsed time in microseconds between
- *    a start tick and the current tick count. It handles timer wrap-around
+ *    a start tick and the current tick count. It handles wrap-around
  *    correctly.
  *
  * @param start_ticks  The recorded start tick.
@@ -271,11 +293,11 @@ timer_elapsed_ms(timer_tick_t start_ticks)
  * @return             Elapsed time in microseconds.
  */
 static inline uint64_t
-timer_elapsed_us(timer_tick_t start_ticks)
+tickms_elapsed_us(tickms_tick_t start_ticks)
 {
-        const timer_tick_t current = timer_get_ticks();
-        const timer_tick_t elapsed_ticks = current - start_ticks;
-        return ((uint64_t)elapsed_ticks * (uint64_t)TIMER_MS_PER_TICK
+        const tickms_tick_t current = tickms_get_ticks();
+        const tickms_tick_t elapsed_ticks = current - start_ticks;
+        return ((uint64_t)elapsed_ticks * (uint64_t)TICKMS_MS_PER_TICK
                 * 1000ull);
 }
 
@@ -284,7 +306,7 @@ timer_elapsed_us(timer_tick_t start_ticks)
  *
  * @details
  *    This function calculates the elapsed time in seconds between
- *    a start tick and the current tick count. It handles timer wrap-around
+ *    a start tick and the current tick count. It handles wrap-around
  *    correctly.
  *
  * @param start_ticks  The recorded start tick.
@@ -292,47 +314,47 @@ timer_elapsed_us(timer_tick_t start_ticks)
  * @return             Elapsed time in seconds.
  */
 static inline uint32_t
-timer_elapsed_sec(timer_tick_t start_ticks)
+tickms_elapsed_sec(tickms_tick_t start_ticks)
 {
-        const timer_tick_t current = timer_get_ticks();
-        const timer_tick_t elapsed_ticks = current - start_ticks;
+        const tickms_tick_t current = tickms_get_ticks();
+        const tickms_tick_t elapsed_ticks = current - start_ticks;
         const uint64_t elapsed_ms =
-            (uint64_t)elapsed_ticks * (uint64_t)TIMER_MS_PER_TICK;
-        return (uint32_t)(elapsed_ms / (uint64_t)TIMER_MS_PER_SEC);
+            (uint64_t)elapsed_ticks * (uint64_t)TICKMS_MS_PER_TICK;
+        return (uint32_t)(elapsed_ms / (uint64_t)TICKMS_MS_PER_SEC);
 }
 
 /**
- * @brief Start a timer by recording the current tick count.
+ * @brief Start a tick counter by recording the current tick count.
  *
- * @param[out] t    Pointer to a timer_tick_t to store the start tick.
+ * @param[out] t    Pointer to a tickms_tick_t to store the start tick.
  */
 static inline void
-timer_start(timer_tick_t *t)
+tickms_start(tickms_tick_t *t)
 {
         if (t != NULL) {
-                *t = timer_get_ticks();
+                *t = tickms_get_ticks();
         }
 }
 
 /**
- * @brief Restart a timer by resetting the tick to now.
+ * @brief Restart a tick counter by resetting the tick to now.
  *
- * @param[out] t    Pointer to a timer variable to restart.
+ * @param[out] t    Pointer to a tick counter variable to restart.
  */
 static inline void
-timer_restart(timer_tick_t *t)
+tickms_restart(tickms_tick_t *t)
 {
         if (t != NULL) {
-                *t = timer_get_ticks();
+                *t = tickms_get_ticks();
         }
 }
 
 /**
- * @brief Check if a timer has expired based on elapsed ticks.
+ * @brief Check if a tick counter has expired based on elapsed ticks.
  *
  * @details
  *    This function checks whether a specified duration has elapsed since
- *    a start tick. It handles timer wrap-around correctly.
+ *    a start tick. It handles wrap-around correctly.
  *
  * @param start     The recorded start tick.
  * @param timeout   The number of ticks to wait.
@@ -340,9 +362,9 @@ timer_restart(timer_tick_t *t)
  * @return          true if the timeout has elapsed, false otherwise.
  */
 static inline bool
-timer_expired(timer_tick_t start, timer_tick_t timeout)
+tickms_expired(tickms_tick_t start, tickms_tick_t timeout)
 {
-        const timer_tick_t current = timer_get_ticks();
+        const tickms_tick_t current = tickms_get_ticks();
         return (current - start) >= timeout;
 }
 
@@ -351,16 +373,16 @@ timer_expired(timer_tick_t start, timer_tick_t timeout)
  *
  * @details
  *    This function calculates the number of ticks elapsed since a start
- *    tick. It handles timer wrap-around correctly.
+ *    tick. It handles wrap-around correctly.
  *
  * @param start_ticks  The recorded start tick.
  *
  * @return             Number of elapsed ticks.
  */
-static inline timer_tick_t
-timer_elapsed_ticks(timer_tick_t start_ticks)
+static inline tickms_tick_t
+tickms_elapsed_ticks(tickms_tick_t start_ticks)
 {
-        const timer_tick_t current = timer_get_ticks();
+        const tickms_tick_t current = tickms_get_ticks();
         return current - start_ticks;
 }
 
@@ -376,11 +398,11 @@ timer_elapsed_ticks(timer_tick_t start_ticks)
  *
  * @return          Number of remaining ticks, or 0 if expired.
  */
-static inline timer_tick_t
-timer_remaining(timer_tick_t start, timer_tick_t timeout)
+static inline tickms_tick_t
+tickms_remaining(tickms_tick_t start, tickms_tick_t timeout)
 {
-        const timer_tick_t current = timer_get_ticks();
-        const timer_tick_t elapsed = current - start;
+        const tickms_tick_t current = tickms_get_ticks();
+        const tickms_tick_t elapsed = current - start;
         return (elapsed >= timeout) ? 0u : (timeout - elapsed);
 }
 
@@ -393,9 +415,9 @@ timer_remaining(timer_tick_t start, timer_tick_t timeout)
  * @return          Milliseconds corresponding to `ticks`.
  */
 static inline uint32_t
-timer_ticks_to_ms(timer_tick_t ticks)
+tickms_ticks_to_ms(tickms_tick_t ticks)
 {
-        const uint64_t ms = (uint64_t)ticks * (uint64_t)TIMER_MS_PER_TICK;
+        const uint64_t ms = (uint64_t)ticks * (uint64_t)TICKMS_MS_PER_TICK;
         return (ms > (uint64_t)UINT32_MAX) ? UINT32_MAX : (uint32_t)ms;
 }
 
@@ -407,23 +429,23 @@ timer_ticks_to_ms(timer_tick_t ticks)
  * @return          Seconds as a floating-point value.
  */
 static inline float
-timer_ticks_to_seconds_f(timer_tick_t ticks)
+tickms_ticks_to_seconds_f(tickms_tick_t ticks)
 {
-        return ((float)ticks * (float)TIMER_MS_PER_TICK)
-               / (float)TIMER_MS_PER_SEC;
+        return ((float)ticks * (float)TICKMS_MS_PER_TICK)
+               / (float)TICKMS_MS_PER_SEC;
 }
 
 /**
  * @brief Get the elapsed time in seconds (floating-point) since a start tick.
  *
- * @param start_ticks  Tick value obtained from timer_start or similar.
+ * @param start_ticks  Tick value obtained from tickms_start or similar.
  *
  * @return            Elapsed seconds as float.
  */
 static inline float
-timer_elapsed_seconds_since(timer_tick_t start_ticks)
+tickms_elapsed_seconds_since(tickms_tick_t start_ticks)
 {
-        return timer_ticks_to_seconds_f(timer_elapsed_ticks(start_ticks));
+        return tickms_ticks_to_seconds_f(tickms_elapsed_ticks(start_ticks));
 }
 
 /**
@@ -434,10 +456,10 @@ timer_elapsed_seconds_since(timer_tick_t start_ticks)
  *
  * @return          Number of ticks that fit completely within `ms`.
  */
-static inline timer_tick_t
-timer_ms_to_ticks_floor(timer_tick_t ms)
+static inline tickms_tick_t
+tickms_ms_to_ticks_floor(uint32_t ms)
 {
-        return (timer_tick_t)(ms / TIMER_MS_PER_TICK);
+        return (tickms_tick_t)(ms / TICKMS_MS_PER_TICK);
 }
 
 /**
@@ -448,12 +470,12 @@ timer_ms_to_ticks_floor(timer_tick_t ms)
  *
  * @return          Minimum number of ticks required to cover `ms`.
  */
-static inline timer_tick_t
-timer_ms_to_ticks_ceil(timer_tick_t ms)
+static inline tickms_tick_t
+tickms_ms_to_ticks_ceil(uint32_t ms)
 {
         const uint64_t adjusted =
-            (uint64_t)ms + (uint64_t)(TIMER_MS_PER_TICK - 1u);
-        return (timer_tick_t)(adjusted / (uint64_t)TIMER_MS_PER_TICK);
+            (uint64_t)ms + (uint64_t)(TICKMS_MS_PER_TICK - 1u);
+        return (tickms_tick_t)(adjusted / (uint64_t)TICKMS_MS_PER_TICK);
 }
 
 /**
@@ -464,13 +486,13 @@ timer_ms_to_ticks_ceil(timer_tick_t ms)
  * @return          Tick count corresponding to `seconds`, saturated at
  *                  `UINT32_MAX` on overflow.
  */
-static inline timer_tick_t
-timer_sec_to_ticks_saturated(uint32_t seconds)
+static inline tickms_tick_t
+tickms_sec_to_ticks_saturated(uint32_t seconds)
 {
         const uint64_t ticks =
-            (uint64_t)seconds * (uint64_t)TIMER_TICKS_PER_SEC;
+            (uint64_t)seconds * (uint64_t)TICKMS_TICKS_PER_SEC;
         return (ticks > (uint64_t)UINT32_MAX) ? UINT32_MAX
-                                              : (timer_tick_t)ticks;
+                                              : (tickms_tick_t)ticks;
 }
 
 /**
@@ -484,18 +506,22 @@ timer_sec_to_ticks_saturated(uint32_t seconds)
  *
  * @return          Nearest tick count, or 0 if seconds <= 0.
  */
-static inline timer_tick_t
-timer_seconds_to_ticks_nearest(float seconds)
+static inline tickms_tick_t
+tickms_seconds_to_ticks_nearest(float seconds)
 {
-        if (seconds <= 0.0f) {
+        /* Use !(> 0) instead of (<= 0) so that NaN is caught here too,
+         * since all comparisons involving NaN evaluate to false. */
+        if (!(seconds > 0.0f)) {
                 return 0u;
         }
         const float ticks_f =
-            (seconds * (float)TIMER_MS_PER_SEC) / (float)TIMER_MS_PER_TICK;
-        if (ticks_f > (float)UINT32_MAX) {
+            (seconds * (float)TICKMS_MS_PER_SEC) / (float)TICKMS_MS_PER_TICK;
+        /* (float)UINT32_MAX rounds up to 2^32, so a guard of > would pass
+         * ticks_f == 2^32, which then wraps to 0 on cast.  Use >= instead. */
+        if (ticks_f >= (float)UINT32_MAX) {
                 return UINT32_MAX;
         }
-        return (timer_tick_t)(ticks_f + 0.5f);
+        return (tickms_tick_t)(ticks_f + 0.5f);
 }
 
 /**
@@ -509,18 +535,20 @@ timer_seconds_to_ticks_nearest(float seconds)
  *                        `duration_ticks`, false otherwise.
  */
 static inline bool
-timer_has_elapsed_since(timer_tick_t start_ticks, timer_tick_t duration_ticks)
+tickms_has_elapsed_since(tickms_tick_t start_ticks,
+                         tickms_tick_t duration_ticks)
 {
-        return timer_elapsed_ticks(start_ticks) >= duration_ticks;
+        return tickms_elapsed_ticks(start_ticks) >= duration_ticks;
 }
 
 /**
- * @brief Check if a timer has expired based on elapsed time in milliseconds.
+ * @brief Check if a tick counter has expired based on elapsed time in
+ * milliseconds.
  *
  * @details
  *    This function checks whether a specified duration in milliseconds has
  *    elapsed since a start tick. It is a convenience wrapper around
- *    timer_expired that converts milliseconds to ticks.
+ *    tickms_expired that converts milliseconds to ticks.
  *
  * @param start     The recorded start tick.
  * @param timeout_ms The timeout duration in milliseconds.
@@ -528,19 +556,19 @@ timer_has_elapsed_since(timer_tick_t start_ticks, timer_tick_t duration_ticks)
  * @return          true if the timeout has elapsed, false otherwise.
  */
 static inline bool
-timer_expired_ms(timer_tick_t start, uint32_t timeout_ms)
+tickms_expired_ms(tickms_tick_t start, uint32_t timeout_ms)
 {
-        const timer_tick_t timeout_ticks = timer_ms_to_ticks_ceil(timeout_ms);
-        return timer_expired(start, timeout_ticks);
+        const tickms_tick_t timeout_ticks = tickms_ms_to_ticks_ceil(timeout_ms);
+        return tickms_expired(start, timeout_ticks);
 }
 
 /**
- * @brief Check if a timer has expired based on elapsed time in seconds.
+ * @brief Check if a tick counter has expired based on elapsed time in seconds.
  *
  * @details
  *    This function checks whether a specified duration in seconds has
  *    elapsed since a start tick. It is a convenience wrapper around
- *    timer_expired that converts seconds to ticks.
+ *    tickms_expired that converts seconds to ticks.
  *
  * @param start     The recorded start tick.
  * @param timeout_sec The timeout duration in seconds.
@@ -548,11 +576,11 @@ timer_expired_ms(timer_tick_t start, uint32_t timeout_ms)
  * @return          true if the timeout has elapsed, false otherwise.
  */
 static inline bool
-timer_expired_sec(timer_tick_t start, uint32_t timeout_sec)
+tickms_expired_sec(tickms_tick_t start, uint32_t timeout_sec)
 {
-        const timer_tick_t timeout_ticks =
-            timer_sec_to_ticks_saturated(timeout_sec);
-        return timer_expired(start, timeout_ticks);
+        const tickms_tick_t timeout_ticks =
+            tickms_sec_to_ticks_saturated(timeout_sec);
+        return tickms_expired(start, timeout_ticks);
 }
 
 /**
@@ -561,10 +589,10 @@ timer_expired_sec(timer_tick_t start, uint32_t timeout_sec)
  * @return Current time in milliseconds, saturated at UINT32_MAX.
  */
 static inline uint32_t
-timer_current_ms(void)
+tickms_current_ms(void)
 {
-        const timer_tick_t current = timer_get_ticks();
-        return timer_ticks_to_ms(current);
+        const tickms_tick_t current = tickms_get_ticks();
+        return tickms_ticks_to_ms(current);
 }
 
 /**
@@ -573,10 +601,10 @@ timer_current_ms(void)
  * @return Current time in microseconds.
  */
 static inline uint64_t
-timer_current_us(void)
+tickms_current_us(void)
 {
-        const timer_tick_t current = timer_get_ticks();
-        return TIMER_TICKS_TO_US(current);
+        const tickms_tick_t current = tickms_get_ticks();
+        return TICKMS_TICKS_TO_US(current);
 }
 
 /**
@@ -585,10 +613,11 @@ timer_current_us(void)
  * @return Current time in seconds.
  */
 static inline uint32_t
-timer_current_sec(void)
+tickms_current_sec(void)
 {
-        const timer_tick_t current = timer_get_ticks();
-        return (uint32_t)(timer_ticks_to_ms(current) / TIMER_MS_PER_SEC);
+        const tickms_tick_t current = tickms_get_ticks();
+        const uint64_t ms = (uint64_t)current * (uint64_t)TICKMS_MS_PER_TICK;
+        return (uint32_t)(ms / (uint64_t)TICKMS_MS_PER_SEC);
 }
 
 #ifdef __cplusplus

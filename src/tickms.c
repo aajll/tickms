@@ -3,7 +3,7 @@
  * @brief Implementation of tickms.
  *
  * @details
- *    This file contains the implementation of non-inline timer functions
+ *    This file contains the implementation of non-inline tickms functions
  *    and the global tick counter variable.
  *
  */
@@ -25,17 +25,17 @@
 /* ================ STATIC VARIABLES ======================================== */
 
 /**
- * @brief Global timer tick counter.
+ * @brief Global tick counter.
  *
  * @details
- *    This counter must be incremented by the system every TIMER_MS_PER_TICK
+ *    This counter must be incremented by the system every TICKMS_MS_PER_TICK
  *    milliseconds, typically from a periodic interrupt service routine or
  *    a high-resolution timer callback. The counter wraps around after
  *    reaching UINT32_MAX.
  *
  *    @note This storage is private to the module and accessed atomically.
  */
-static _Atomic timer_tick_t timer_ticks = 0u;
+static _Atomic tickms_tick_t tickms_ticks = 0u;
 
 /* ================ MACROS ================================================== */
 
@@ -44,35 +44,36 @@ static _Atomic timer_tick_t timer_ticks = 0u;
 /* ================ GLOBAL FUNCTIONS ======================================== */
 
 void
-timer_init(timer_tick_t initial_ticks)
+tickms_init(tickms_tick_t initial_ticks)
 {
-        atomic_store_explicit(&timer_ticks, initial_ticks,
+        atomic_store_explicit(&tickms_ticks, initial_ticks,
                               memory_order_relaxed);
 }
 
 void
-timer_set_ticks(timer_tick_t ticks)
+tickms_set_ticks(tickms_tick_t ticks)
 {
-        atomic_store_explicit(&timer_ticks, ticks, memory_order_relaxed);
+        atomic_store_explicit(&tickms_ticks, ticks, memory_order_relaxed);
 }
 
-timer_tick_t
-timer_get_ticks(void)
+tickms_tick_t
+tickms_get_ticks(void)
 {
-        return atomic_load_explicit(&timer_ticks, memory_order_relaxed);
+        return atomic_load_explicit(&tickms_ticks, memory_order_relaxed);
 }
 
-timer_tick_t
-timer_tick_increment(void)
+tickms_tick_t
+tickms_tick_increment(void)
 {
-        return atomic_fetch_add_explicit(&timer_ticks, 1u, memory_order_relaxed)
+        return atomic_fetch_add_explicit(&tickms_ticks, 1u,
+                                         memory_order_relaxed)
                + 1u;
 }
 
-timer_tick_t
-timer_tick_advance(timer_tick_t delta)
+tickms_tick_t
+tickms_tick_advance(tickms_tick_t delta)
 {
-        return atomic_fetch_add_explicit(&timer_ticks, delta,
+        return atomic_fetch_add_explicit(&tickms_ticks, delta,
                                          memory_order_relaxed)
                + delta;
 }
