@@ -69,7 +69,7 @@ if get_option('b_sanitize') == 'none'
     args: [
       files('run_smoke_install.py'),
       meson.project_source_root(),
-      meson.project_build_root(),
+      meson.global_build_root(),
       get_option('prefix'),
       get_option('libdir'),
     ],
