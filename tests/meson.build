@@ -1,5 +1,5 @@
 cc = meson.get_compiler('c')
-sh = find_program('sh')
+python = find_program('python3')
 
 test_exe = executable(
   'test_tickms',
@@ -65,9 +65,10 @@ endforeach
 if get_option('b_sanitize') == 'none'
   test(
     'tickms installed consumer smoke',
-    sh,
+    python,
     args: [
-      files('smoke_install.sh'),
+      files('run_smoke_install.py'),
+      meson.project_source_root(),
       meson.project_build_root(),
       get_option('prefix'),
       get_option('libdir'),
