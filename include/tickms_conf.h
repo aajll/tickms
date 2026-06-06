@@ -1,6 +1,7 @@
 /**
- * @file
- *    tickms_conf.h
+ * SPDX-License-Identifier: MIT
+ *
+ * @file: tickms_conf.h
  *
  * @brief
  *    Public configuration header for tickms.

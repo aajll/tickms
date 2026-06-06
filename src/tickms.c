@@ -1,6 +1,10 @@
 /**
- * @file tickms.c
- * @brief Implementation of tickms.
+ * SPDX-License-Identifier: MIT
+ *
+ * @file: tickms.c
+ *
+ * @brief
+ *    Implementation of tickms.
  *
  * @details
  *    This file contains the implementation of non-inline tickms functions
