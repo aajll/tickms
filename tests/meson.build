@@ -59,10 +59,11 @@ foreach tick_ms : [0, 3, 1001]
 endforeach
 
 # The smoke test installs libtickms.a and links it from a plain consumer
-# project that carries no sanitizer flags.  A sanitizer-instrumented .a
-# embeds __asan_* / __ubsan_* symbols that the consumer linker cannot
-# resolve, so the test is structurally incompatible with sanitized builds.
-if get_option('b_sanitize') == 'none'
+# project that carries no sanitizer or coverage flags. Instrumented static
+# archives embed sanitizer/gcov runtime symbols that the consumer linker
+# cannot resolve, so the test is structurally incompatible with sanitizer
+# and coverage builds.
+if get_option('b_sanitize') == 'none' and not get_option('b_coverage')
   test(
     'tickms installed consumer smoke',
     python,

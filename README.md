@@ -1,5 +1,7 @@
 # tickms
 
+[![CI](https://github.com/aajll/tickms/actions/workflows/ci.yml/badge.svg)](https://github.com/aajll/tickms/actions/workflows/ci.yml)
+
 Configurable tick-based timer system for time measurement, timeout handling, and duration calculation.
 
 ## Features
@@ -12,7 +14,7 @@ Configurable tick-based timer system for time measurement, timeout handling, and
 - **Compile-time validation**: Static assertions catch invalid configurations at compile time
 - **Compliance-aware design goals**: Small auditable codebase with static allocation, explicit contracts, and unit-test coverage.
 
-## Using the Library
+## Installation
 
 ### As a Meson subproject
 
@@ -62,23 +64,6 @@ also discover the package as `tickms`.
 The generated version header is available as `tickms_version.h` in the
 build tree and as `<tickms/tickms_version.h>` after install.
 
-## Building
-
-```sh
-# Library only (release)
-meson setup build --buildtype=release -Dbuild_tests=false
-meson compile -C build
-
-# With unit tests
-meson setup build --buildtype=debug -Dbuild_tests=true
-meson compile -C build
-meson test -C build --verbose
-```
-
-The test suite includes core unit tests, configuration-matrix tests for
-multiple `TICKMS_MS_PER_TICK` values, and an installed-consumer smoke test
-that validates the exported pkg-config package and public headers.
-
 ## Quick Start
 
 ```c
@@ -91,7 +76,7 @@ int main(void)
 {
         tickms_tick_t start;
 
-        /* Initialize tickms */
+        /* Initialise tickms */
         tickms_init(0u);
 
         /* Start a tick counter */
@@ -110,6 +95,23 @@ int main(void)
         return 0;
 }
 ```
+
+## Building
+
+```sh
+# Library only (release)
+meson setup build --buildtype=release -Dbuild_tests=false
+meson compile -C build
+
+# With unit tests
+meson setup build --buildtype=debug -Dbuild_tests=true
+meson compile -C build
+meson test -C build --verbose
+```
+
+The test suite includes core unit tests, configuration-matrix tests for
+multiple `TICKMS_MS_PER_TICK` values, and an installed-consumer smoke test
+that validates the exported pkg-config package and public headers.
 
 ## API Reference
 
@@ -242,7 +244,7 @@ static inline uint32_t tickms_current_sec(void);
 |-------|------|
 | **Tick period** | Must divide 1000 evenly (1, 2, 4, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000 ms) |
 | **Wrap-around** | All elapsed time functions handle 32-bit overflow correctly |
-| **Thread safety** | Atomic operations protect the tick counter; safe for concurrent reads with a single writer — multiple concurrent writers must be externally serialized |
+| **Thread safety** | Atomic operations protect the tick counter; safe for concurrent reads with a single writer — multiple concurrent writers must be externally serialised |
 | **Saturation** | Conversion functions saturate at UINT32_MAX instead of wrapping |
-| **Initialization** | Call `tickms_init()` once before any other tick functions |
+| **Initialisation** | Call `tickms_init()` once before any other tick functions |
 | **Tick updates** | Increment ticks from a periodic interrupt or tick callback |

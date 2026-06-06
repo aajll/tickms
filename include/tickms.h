@@ -1,6 +1,7 @@
 /**
- * @file
- *    tickms.h
+ * SPDX-License-Identifier: MIT
+ *
+ * @file: tickms.h
  *
  * @brief
  *    Hardware-agnostic tick-based timer module with configurable tick period.
