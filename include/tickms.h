@@ -8,9 +8,9 @@
  *
  * @details
  *    This module provides a configurable tick-based timer system for time
- *    measurement, timeout handling, and duration calculations. It is designed
- *    to be independent of any state machine framework and can be used as a
- *    standalone timer abstraction layer.
+ *    measurement, timeout handling, and duration calculations. It has no
+ *    dependency on any RTOS, framework, or hardware timer peripheral and can
+ *    be used as a standalone timer abstraction layer.
  *
  *    Key features:
  *    - Configurable tick period (1-1000 ms)
@@ -33,9 +33,10 @@
  *    - Clear invariants and preconditions
  *
  *   Example (set tick period to 1 ms):
- *   ----------------------------------
+ *   @code
  *   #define TICKMS_MS_PER_TICK 1u
  *   #include "tickms.h"
+ *   @endcode
  *
  * @note
  *   Configure **TICKMS_MS_PER_TICK** before including this file, either
@@ -149,7 +150,7 @@ typedef uint32_t tickms_tick_t;
  * @note Prefer the corresponding inline helper for runtime values when
  *       overflow handling must be explicit.
  */
-#define TICKMS_SEC_TO_TICKS(sec)  ((tickms_tick_t)((sec) * TICKMS_TICKS_PER_SEC))
+#define TICKMS_SEC_TO_TICKS(sec) ((tickms_tick_t)((sec) * TICKMS_TICKS_PER_SEC))
 
 /**
  * @def TICKMS_SEC_TO_MS(sec)
@@ -158,7 +159,7 @@ typedef uint32_t tickms_tick_t;
  * @param sec       Time in seconds.
  * @return          Milliseconds.
  */
-#define TICKMS_SEC_TO_MS(sec)     ((uint32_t)((sec) * TICKMS_MS_PER_SEC))
+#define TICKMS_SEC_TO_MS(sec)    ((uint32_t)((sec) * TICKMS_MS_PER_SEC))
 
 /**
  * @def TICKMS_SEC_TO_US(sec)
@@ -167,7 +168,7 @@ typedef uint32_t tickms_tick_t;
  * @param sec       Time in seconds.
  * @return          Microseconds.
  */
-#define TICKMS_SEC_TO_US(sec)     ((uint64_t)((sec) * 1000000ull))
+#define TICKMS_SEC_TO_US(sec)    ((uint64_t)((sec) * 1000000ull))
 
 /**
  * @def TICKMS_TICKS_TO_MS(ticks)

@@ -10,6 +10,28 @@ test_exe = executable(
 
 test('tickms module', test_exe)
 
+# C11 <stdatomic.h> backend. The default on GCC/Clang is the __atomic path, so
+# this forces the C11 backend for both the test and the core (compiled from
+# library_sources with the same -D) to exercise that path.
+test_c11_exe = executable(
+  'test_tickms_c11',
+  files('test_tickms_c11.c') + library_sources,
+  include_directories: [public_headers, generated_headers],
+  c_args: ['-DTICKMS_USE_C11_ATOMICS=1'],
+)
+test('tickms c11', test_c11_exe)
+
+# Degenerate uniprocessor (volatile) backend. Forces the no-atomics path for
+# both the test and the core to verify the volatile fallback macros expand
+# cleanly and produce correct single-threaded results.
+test_noatomics_exe = executable(
+  'test_tickms_noatomics',
+  files('test_tickms_noatomics.c') + library_sources,
+  include_directories: [public_headers, generated_headers],
+  c_args: ['-DTICKMS_USE_NO_ATOMICS=1'],
+)
+test('tickms noatomics', test_noatomics_exe)
+
 foreach tick_ms : [1, 20, 250]
   cfg_test = executable(
     'test_tickms_cfg_@0@ms'.format(tick_ms),
