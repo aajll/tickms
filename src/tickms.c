@@ -10,13 +10,24 @@
  *    This file contains the implementation of non-inline tickms functions
  *    and the global tick counter variable.
  *
+ * @par MISRA C:2012 deviation record
+ *    The library is written against MISRA C:2012 principles. Known deviations,
+ *    all advisory and justified:
+ *      - Compiler atomic builtins (`__atomic_load_n`, `__atomic_store_n`,
+ *        `__atomic_fetch_add`) are language extensions (Dir 1.1 / Rule 1.2).
+ *        Justified: portable lock-free atomics; isolated behind
+ *        `tickms_conf.h` macros and swappable for the C11 `<stdatomic.h>`
+ *        path or the uniprocessor volatile fallback. Applies only when the
+ *        GNU backend is selected.
+ *      - The no-atomics fallback's `TICKMS_ATOMIC_FETCH_ADD` uses the value
+ *        of an assignment expression (Rule 13.4, advisory). Justified at the
+ *        macro definition in `tickms_conf.h`. Applies only when the
+ *        no-atomics backend is selected.
  */
 
 /* ================ INCLUDES ================================================ */
 
 #include "tickms.h"
-
-#include <stdatomic.h>
 
 /* ================ DEFINES ================================================= */
 
@@ -37,9 +48,11 @@
  *    a high-resolution timer callback. The counter wraps around after
  *    reaching UINT32_MAX.
  *
- *    @note This storage is private to the module and accessed atomically.
+ *    @note This storage is private to the module and accessed via the atomic
+ *          backend selected in tickms_conf.h (GCC/Clang __atomic, C11
+ *          <stdatomic.h>, or volatile uniprocessor fallback).
  */
-static _Atomic tickms_tick_t tickms_ticks = 0u;
+static TICKMS_ATOMIC_QUAL tickms_tick_t tickms_ticks = 0u;
 
 /* ================ MACROS ================================================== */
 
@@ -50,34 +63,29 @@ static _Atomic tickms_tick_t tickms_ticks = 0u;
 void
 tickms_init(tickms_tick_t initial_ticks)
 {
-        atomic_store_explicit(&tickms_ticks, initial_ticks,
-                              memory_order_relaxed);
+        TICKMS_ATOMIC_STORE(&tickms_ticks, initial_ticks);
 }
 
 void
 tickms_set_ticks(tickms_tick_t ticks)
 {
-        atomic_store_explicit(&tickms_ticks, ticks, memory_order_relaxed);
+        TICKMS_ATOMIC_STORE(&tickms_ticks, ticks);
 }
 
 tickms_tick_t
 tickms_get_ticks(void)
 {
-        return atomic_load_explicit(&tickms_ticks, memory_order_relaxed);
+        return TICKMS_ATOMIC_LOAD(&tickms_ticks);
 }
 
 tickms_tick_t
 tickms_tick_increment(void)
 {
-        return atomic_fetch_add_explicit(&tickms_ticks, 1u,
-                                         memory_order_relaxed)
-               + 1u;
+        return TICKMS_ATOMIC_FETCH_ADD(&tickms_ticks, 1u) + 1u;
 }
 
 tickms_tick_t
 tickms_tick_advance(tickms_tick_t delta)
 {
-        return atomic_fetch_add_explicit(&tickms_ticks, delta,
-                                         memory_order_relaxed)
-               + delta;
+        return TICKMS_ATOMIC_FETCH_ADD(&tickms_ticks, delta) + delta;
 }

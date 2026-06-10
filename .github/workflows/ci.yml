@@ -89,6 +89,7 @@ jobs:
           --buildtype=debug
           -Dbuild_tests=true
           -Db_coverage=true
+          -Dc_args=-fprofile-update=atomic
 
       - name: Build
         run: meson compile -C build

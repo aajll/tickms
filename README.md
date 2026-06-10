@@ -11,6 +11,7 @@ Configurable tick-based timer system for time measurement, timeout handling, and
 - **Multiple time units**: Convert between ticks, milliseconds, microseconds, and seconds
 - **Timer utilities**: Start, restart, check expiry, and calculate remaining time
 - **Concurrency-safe reads**: Atomic operations protect the tick counter; concurrent readers are safe alongside a single writer
+- **Portable atomics**: selects a GCC/Clang `__atomic` path, a C11 `<stdatomic.h>` path, or a `volatile` uniprocessor fallback — auto-detected or consumer-forced
 - **Compile-time validation**: Static assertions catch invalid configurations at compile time
 - **Compliance-aware design goals**: Small auditable codebase with static allocation, explicit contracts, and unit-test coverage.
 
@@ -122,6 +123,7 @@ that validates the exported pkg-config package and public headers.
 | `TICKMS_MS_PER_TICK` | Tick period in milliseconds (configured via `tickms_conf.h`, default: 10) |
 | `TICKMS_MS_PER_SEC` | Milliseconds per second (1000) |
 | `TICKMS_TICKS_PER_SEC` | Ticks per second (computed) |
+| `TICKMS_USE_GNU_ATOMICS` / `TICKMS_USE_C11_ATOMICS` / `TICKMS_USE_NO_ATOMICS` | Atomic backend selection. Define exactly one consistently for the tickms library build and all consumers; do not override these only in an application using an already-built library. Otherwise the library auto-selects GCC/Clang `__atomic`, then C11 `<stdatomic.h>`, then the uniprocessor `volatile` fallback (the path for toolchains with C11 but no `_Atomic` support, e.g. TI C2000) |
 
 ### Public Configuration Header
 
@@ -248,3 +250,4 @@ static inline uint32_t tickms_current_sec(void);
 | **Saturation** | Conversion functions saturate at UINT32_MAX instead of wrapping |
 | **Initialisation** | Call `tickms_init()` once before any other tick functions |
 | **Tick updates** | Increment ticks from a periodic interrupt or tick callback |
+| **Atomic backend** | All atomics route through `tickms_conf.h` macros (`__atomic`, C11, or uniprocessor fallback). The default auto-selects GCC/Clang `__atomic` on GCC/Clang, C11 `<stdatomic.h>` on conforming C11 toolchains, and `volatile` with no fences as a degenerate uniprocessor fallback. Define exactly one of `TICKMS_USE_GNU_ATOMICS`, `TICKMS_USE_C11_ATOMICS`, or `TICKMS_USE_NO_ATOMICS` to override. The `volatile` backend is correct only when readers and the writer cannot run concurrently on separate cores |
