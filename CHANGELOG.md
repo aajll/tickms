@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-10
+
+### Added
+
+- Configurable atomic backend, borrowed from seqlock: auto-selects GCC/Clang `__atomic`, C11 `<stdatomic.h>`, or a `volatile` uniprocessor fallback, overridable via the `TICKMS_USE_*` macros. The fallback is strictly standard C, so toolchains with C11 but no `_Atomic` (e.g. TI C2000) build out of the box.
+- Backend regression tests forcing the C11 and no-atomics paths, mirroring seqlock's test pattern.
+
 ### Changed
 
 - Added changelog, contributor guide, security policy, SPDX headers, README badge, cleaned ignore rules, and a standard coverage gate.
