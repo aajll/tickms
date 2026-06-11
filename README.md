@@ -118,12 +118,17 @@ that validates the exported pkg-config package and public headers.
 
 ### Configuration Macros
 
-| Macro | Description |
-|-------|-------------|
-| `TICKMS_MS_PER_TICK` | Tick period in milliseconds (configured via `tickms_conf.h`, default: 10) |
-| `TICKMS_MS_PER_SEC` | Milliseconds per second (1000) |
-| `TICKMS_TICKS_PER_SEC` | Ticks per second (computed) |
+| Macro                                                                         | Description                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TICKMS_MS_PER_TICK`                                                          | Tick period in milliseconds (configured via `tickms_conf.h`, default: 10)                                                                                                                                                                                                                                                                                                                      |
 | `TICKMS_USE_GNU_ATOMICS` / `TICKMS_USE_C11_ATOMICS` / `TICKMS_USE_NO_ATOMICS` | Atomic backend selection. Define exactly one consistently for the tickms library build and all consumers; do not override these only in an application using an already-built library. Otherwise the library auto-selects GCC/Clang `__atomic`, then C11 `<stdatomic.h>`, then the uniprocessor `volatile` fallback (the path for toolchains with C11 but no `_Atomic` support, e.g. TI C2000) |
+
+### Constants
+
+| Macro                  | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `TICKMS_MS_PER_SEC`    | Milliseconds per second (fixed, 1000)                |
+| `TICKMS_TICKS_PER_SEC` | Ticks per second (derived from `TICKMS_MS_PER_TICK`) |
 
 ### Public Configuration Header
 
@@ -135,20 +140,20 @@ that validates the exported pkg-config package and public headers.
 
 ### Type Definitions
 
-| Type | Description |
-|------|-------------|
+| Type            | Description                |
+| --------------- | -------------------------- |
 | `tickms_tick_t` | 32-bit unsigned tick count |
 
 ### Conversion Macros
 
-| Macro | Description |
-|-------|-------------|
-| `TICKMS_MS_TO_TICKS(ms)` | Convert ms to ticks (round up) |
-| `TICKMS_SEC_TO_TICKS(sec)` | Convert seconds to ticks |
-| `TICKMS_SEC_TO_MS(sec)` | Convert seconds to ms |
-| `TICKMS_SEC_TO_US(sec)` | Convert seconds to microseconds |
-| `TICKMS_TICKS_TO_MS(ticks)` | Convert ticks to ms |
-| `TICKMS_TICKS_TO_US(ticks)` | Convert ticks to microseconds |
+| Macro                       | Description                     |
+| --------------------------- | ------------------------------- |
+| `TICKMS_MS_TO_TICKS(ms)`    | Convert ms to ticks (round up)  |
+| `TICKMS_SEC_TO_TICKS(sec)`  | Convert seconds to ticks        |
+| `TICKMS_SEC_TO_MS(sec)`     | Convert seconds to ms           |
+| `TICKMS_SEC_TO_US(sec)`     | Convert seconds to microseconds |
+| `TICKMS_TICKS_TO_MS(ticks)` | Convert ticks to ms             |
+| `TICKMS_TICKS_TO_US(ticks)` | Convert ticks to microseconds   |
 
 ### Core Tick Functions
 
@@ -204,6 +209,7 @@ static inline uint32_t tickms_current_sec(void);
 ## Use Cases
 
 - **Operation timeout**: Monitor if an operation exceeds a time limit
+
   ```c
   tickms_tick_t start;
   tickms_start(&start);
@@ -213,6 +219,7 @@ static inline uint32_t tickms_current_sec(void);
   ```
 
 - **Periodic task execution**: Run code at regular intervals
+
   ```c
   tickms_tick_t last = tickms_get_ticks();
   while (1) {
@@ -224,6 +231,7 @@ static inline uint32_t tickms_current_sec(void);
   ```
 
 - **Duration measurement**: Measure how long an operation takes
+
   ```c
   tickms_tick_t start;
   tickms_start(&start);
@@ -242,12 +250,12 @@ static inline uint32_t tickms_current_sec(void);
 
 ## Notes
 
-| Topic | Note |
-|-------|------|
-| **Tick period** | Must divide 1000 evenly (1, 2, 4, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000 ms) |
-| **Wrap-around** | All elapsed time functions handle 32-bit overflow correctly |
-| **Thread safety** | Atomic operations protect the tick counter; safe for concurrent reads with a single writer — multiple concurrent writers must be externally serialised |
-| **Saturation** | Conversion functions saturate at UINT32_MAX instead of wrapping |
-| **Initialisation** | Call `tickms_init()` once before any other tick functions |
-| **Tick updates** | Increment ticks from a periodic interrupt or tick callback |
+| Topic              | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tick period**    | Must divide 1000 evenly (1, 2, 4, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000 ms)                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Wrap-around**    | All elapsed time functions handle 32-bit overflow correctly                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **Thread safety**  | Atomic operations protect the tick counter; safe for concurrent reads with a single writer — multiple concurrent writers must be externally serialised                                                                                                                                                                                                                                                                                                                                                          |
+| **Saturation**     | Conversion functions saturate at UINT32_MAX instead of wrapping                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Initialisation** | Call `tickms_init()` once before any other tick functions                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Tick updates**   | Increment ticks from a periodic interrupt or tick callback                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | **Atomic backend** | All atomics route through `tickms_conf.h` macros (`__atomic`, C11, or uniprocessor fallback). The default auto-selects GCC/Clang `__atomic` on GCC/Clang, C11 `<stdatomic.h>` on conforming C11 toolchains, and `volatile` with no fences as a degenerate uniprocessor fallback. Define exactly one of `TICKMS_USE_GNU_ATOMICS`, `TICKMS_USE_C11_ATOMICS`, or `TICKMS_USE_NO_ATOMICS` to override. The `volatile` backend is correct only when readers and the writer cannot run concurrently on separate cores |
