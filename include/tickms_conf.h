@@ -84,7 +84,10 @@
  *
  * The other backends fail to compile where the 32-bit counter is not
  * lock-free, such as 8-bit and 16-bit cores and ARMv6-M; this backend is the
- * one to select there.
+ * one to select there. tickms_get_ticks() reads the counter until two
+ * consecutive reads agree, so a tick interrupt that lands mid-read cannot
+ * return a torn value. A reader that can itself interrupt the tick update
+ * (e.g. a higher-priority ISR) still needs the update masked against it.
  */
 
 /*

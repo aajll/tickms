@@ -32,6 +32,17 @@ test_noatomics_exe = executable(
 )
 test('tickms noatomics', test_noatomics_exe)
 
+# Torn reads in the no-atomics backend. The test replays the values a core
+# narrower than the counter would read, and includes the core directly so its
+# override of the internal counter read applies.
+test_torn_read_exe = executable(
+  'test_tickms_torn_read',
+  files('test_tickms_torn_read.c'),
+  include_directories: [public_headers, generated_headers],
+  c_args: ['-DTICKMS_USE_NO_ATOMICS=1'],
+)
+test('tickms torn read', test_torn_read_exe)
+
 # One producer and several readers share the counter. Built for each atomic
 # backend, compiling the core with the same selector, so the TSan job checks
 # both. The no-atomics backend is single-core only and is not run threaded.

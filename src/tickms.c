@@ -31,6 +31,12 @@
 
 /* ================ DEFINES ================================================= */
 
+#if defined(TICKMS_USE_NO_ATOMICS) && !defined(TICKMS__READ_COUNTER)
+/* One read of the counter. Internal; a test overrides it to replay the values
+ * a multi-access read observes. */
+#define TICKMS__READ_COUNTER() TICKMS_ATOMIC_LOAD(&tickms_ticks)
+#endif
+
 /* ================ STRUCTURES ============================================== */
 
 /* ================ TYPEDEFS ================================================ */
@@ -75,7 +81,22 @@ tickms_set_ticks(tickms_tick_t ticks)
 tickms_tick_t
 tickms_get_ticks(void)
 {
+#if defined(TICKMS_USE_NO_ATOMICS)
+        /* A core narrower than the counter reads it in several accesses, so a
+         * tick that lands between them yields a mix of the old and new values.
+         * Two consecutive reads that agree did not straddle an update. */
+        tickms_tick_t first;
+        tickms_tick_t second = TICKMS__READ_COUNTER();
+
+        do {
+                first = second;
+                second = TICKMS__READ_COUNTER();
+        } while (first != second);
+
+        return second;
+#else
         return TICKMS_ATOMIC_LOAD(&tickms_ticks);
+#endif
 }
 
 tickms_tick_t
