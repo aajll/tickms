@@ -152,6 +152,11 @@ _Static_assert(
 
 /* ================ MACROS ================================================== */
 
+/* Clamps a 64-bit (or floating) conversion result to the 32-bit range. Kept
+ * a constant expression so the public macros remain usable in initialisers. */
+#define TICKMS__SATURATE_U32(x)                                                \
+        (((x) > UINT32_MAX) ? UINT32_MAX : (uint32_t)(x))
+
 /**
  * @def TICKMS_MS_TO_TICKS(ms)
  * @brief Convert a time expressed in milliseconds to the corresponding number
@@ -160,11 +165,11 @@ _Static_assert(
  * @param ms        Time in milliseconds.
  * @return          Minimum number of ticks required to cover `ms`.
  *
- * @note Prefer the corresponding inline helper for runtime values when
- *       overflow handling must be explicit.
+ * @note The rounding term is added in 64 bits, so `ms` up to UINT32_MAX does
+ *       not wrap, matching tickms_ms_to_ticks_ceil().
  */
 #define TICKMS_MS_TO_TICKS(ms)                                                 \
-        ((tickms_tick_t)(((ms) + (TICKMS_MS_PER_TICK - 1u))                    \
+        ((tickms_tick_t)(((ms) + (uint64_t)(TICKMS_MS_PER_TICK - 1u))          \
                          / TICKMS_MS_PER_TICK))
 
 /**
@@ -172,12 +177,14 @@ _Static_assert(
  * @brief Convert seconds to ticks (integer, truncating fractional part).
  *
  * @param sec       Time in seconds.
- * @return          Number of ticks.
+ * @return          Number of ticks, saturated at UINT32_MAX like
+ *                  tickms_sec_to_ticks_saturated().
  *
- * @note Prefer the corresponding inline helper for runtime values when
- *       overflow handling must be explicit.
+ * @note `sec` is evaluated more than once; use the function for arguments
+ *       with side effects.
  */
-#define TICKMS_SEC_TO_TICKS(sec) ((tickms_tick_t)((sec) * TICKMS_TICKS_PER_SEC))
+#define TICKMS_SEC_TO_TICKS(sec)                                               \
+        TICKMS__SATURATE_U32((sec) * (uint64_t)TICKMS_TICKS_PER_SEC)
 
 /**
  * @def TICKMS_SEC_TO_MS(sec)
@@ -186,7 +193,7 @@ _Static_assert(
  * @param sec       Time in seconds.
  * @return          Milliseconds.
  */
-#define TICKMS_SEC_TO_MS(sec)    ((uint32_t)((sec) * TICKMS_MS_PER_SEC))
+#define TICKMS_SEC_TO_MS(sec) ((uint32_t)((sec) * TICKMS_MS_PER_SEC))
 
 /**
  * @def TICKMS_SEC_TO_US(sec)
@@ -195,16 +202,21 @@ _Static_assert(
  * @param sec       Time in seconds.
  * @return          Microseconds.
  */
-#define TICKMS_SEC_TO_US(sec)    ((uint64_t)((sec) * 1000000ull))
+#define TICKMS_SEC_TO_US(sec) ((uint64_t)((sec) * 1000000ull))
 
 /**
  * @def TICKMS_TICKS_TO_MS(ticks)
  * @brief Convert ticks to milliseconds.
  *
  * @param ticks     Number of ticks.
- * @return          Milliseconds.
+ * @return          Milliseconds, saturated at UINT32_MAX like
+ *                  tickms_ticks_to_ms().
+ *
+ * @note `ticks` is evaluated more than once; use the function for arguments
+ *       with side effects.
  */
-#define TICKMS_TICKS_TO_MS(ticks) ((uint32_t)((ticks) * (TICKMS_MS_PER_TICK)))
+#define TICKMS_TICKS_TO_MS(ticks)                                              \
+        TICKMS__SATURATE_U32((ticks) * (uint64_t)TICKMS_MS_PER_TICK)
 
 /**
  * @def TICKMS_TICKS_TO_US(ticks)

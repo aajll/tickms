@@ -311,6 +311,34 @@ TEST_CASE(test_tickms_macro_ticks_to_ms)
         TEST_ASSERT(TICKMS_TICKS_TO_MS(100u) == 1000u);
 }
 
+/* The macros mirror the saturating functions, so they must agree at the top
+ * of the input range, and stay constant expressions. */
+_Static_assert(TICKMS_TICKS_TO_MS(UINT32_MAX) == UINT32_MAX,
+               "TICKMS_TICKS_TO_MS must saturate in a constant expression");
+
+TEST_CASE(test_tickms_macro_ms_to_ticks_no_wrap)
+{
+        TEST_ASSERT(TICKMS_MS_TO_TICKS(UINT32_MAX)
+                    == tickms_ms_to_ticks_ceil(UINT32_MAX));
+        TEST_ASSERT(TICKMS_MS_TO_TICKS(UINT32_MAX) == 429496730u);
+}
+
+TEST_CASE(test_tickms_macro_ticks_to_ms_saturated)
+{
+        TEST_ASSERT(TICKMS_TICKS_TO_MS(UINT32_MAX)
+                    == tickms_ticks_to_ms(UINT32_MAX));
+        TEST_ASSERT(TICKMS_TICKS_TO_MS(429496729u) == 4294967290u);
+        TEST_ASSERT(TICKMS_TICKS_TO_MS(429496730u) == UINT32_MAX);
+}
+
+TEST_CASE(test_tickms_macro_sec_to_ticks_saturated)
+{
+        TEST_ASSERT(TICKMS_SEC_TO_TICKS(2u) == 200u);
+        TEST_ASSERT(TICKMS_SEC_TO_TICKS(UINT32_MAX)
+                    == tickms_sec_to_ticks_saturated(UINT32_MAX));
+        TEST_ASSERT(TICKMS_SEC_TO_TICKS(UINT32_MAX) == UINT32_MAX);
+}
+
 TEST_CASE(test_tickms_macro_sec_to_ms)
 {
         TEST_ASSERT(TICKMS_SEC_TO_MS(1u) == 1000u);
@@ -462,6 +490,12 @@ main(void)
                  "test_tickms_macro_ms_to_ticks");
         run_test(test_tickms_macro_ticks_to_ms,
                  "test_tickms_macro_ticks_to_ms");
+        run_test(test_tickms_macro_ms_to_ticks_no_wrap,
+                 "test_tickms_macro_ms_to_ticks_no_wrap");
+        run_test(test_tickms_macro_ticks_to_ms_saturated,
+                 "test_tickms_macro_ticks_to_ms_saturated");
+        run_test(test_tickms_macro_sec_to_ticks_saturated,
+                 "test_tickms_macro_sec_to_ticks_saturated");
         run_test(test_tickms_macro_sec_to_ms, "test_tickms_macro_sec_to_ms");
         run_test(test_tickms_init_null_start, "test_tickms_init_null_start");
         run_test(test_tickms_init_null_restart,
