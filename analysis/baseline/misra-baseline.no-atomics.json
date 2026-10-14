@@ -1,0 +1,47 @@
+{
+  "schema": "misch/baseline@2",
+  "fingerprints": {
+    "1bbe87d6a77a": {
+      "rule_id": "misra-c2012-13.4",
+      "file": "src/tickms.c",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 2
+    },
+    "7df17a334039": {
+      "rule_id": "misra-c2012-10.8",
+      "file": "include/tickms.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 2
+    },
+    "a109f611a6bf": {
+      "rule_id": "misra-c2012-12.1",
+      "file": "include/tickms.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 1
+    },
+    "a14f9985b594": {
+      "rule_id": "misra-c2012-8.7",
+      "file": "src/tickms.c",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 4
+    },
+    "ae1514b0a8c2": {
+      "rule_id": "misra-c2012-2.5",
+      "file": "include/tickms_conf.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 3
+    },
+    "ee4de8187c08": {
+      "rule_id": "misra-c2012-2.5",
+      "file": "include/tickms.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 6
+    },
+    "f673e9c52de8": {
+      "rule_id": "misra-c2012-15.5",
+      "file": "include/tickms.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 2
+    }
+  }
+}

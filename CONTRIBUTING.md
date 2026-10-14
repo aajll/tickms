@@ -6,26 +6,36 @@ designed to be safe to drop into embedded firmware and audited environments.
 
 ## Getting started
 
-The same commands CI runs, locally:
+The same commands CI runs, locally. Python tools install with [uv](https://docs.astral.sh/uv/):
 
 ```sh
+uv tool install meson
+uv tool install ninja
+uv tool install gcovr
+uv tool install misch   # also needs cppcheck from the system package manager
+
 # Configure with tests + sanitisers (CI default)
-meson setup build --buildtype=debug -Dbuild_tests=true \
-                  -Db_sanitize=address,undefined
+meson setup build --buildtype=debug -Dbuild_tests=true -Db_sanitize=address,undefined
 meson compile -C build
 meson test -C build --verbose
 
-# Coverage (CI gate is 80% line + 70% branch)
-meson setup build_cov --buildtype=debug -Dbuild_tests=true \
-                      -Db_coverage=true
+# Coverage (CI gate is 100% line + 100% branch)
+meson setup build_cov --buildtype=debug -Dbuild_tests=true -Db_coverage=true -Dc_args=-fprofile-update=atomic
 meson compile -C build_cov && meson test -C build_cov
 gcovr --root . --filter 'src/' --filter 'include/' --print-summary
+
+# Formatting (pinned clang-format through uvx); --fix rewrites in place
+scripts/format.sh
+
+# MISRA C:2023 analysis against the recorded baseline, for each atomic backend
+misch run --baseline
+misch run --baseline --profile c11-atomics
+misch run --baseline --profile no-atomics
 ```
 
 ## Source style
 
-- `.clang-format` is mandatory. Run `clang-format -i` on every modified
-  `.c` / `.h` file before submitting.
+- `.clang-format` is mandatory. Run `scripts/format.sh --fix` before submitting.
 - 8-space indent, Linux brace style, 80-column limit. Match the existing
   conventions; do not reformat unrelated code.
 - The Meson build system is the single source of truth. Update
@@ -43,7 +53,7 @@ gcovr --root . --filter 'src/' --filter 'include/' --print-summary
 
 - Add a test for every bug fix.
 - Add a test for every new feature.
-- CI enforces an 80% line / 70% branch coverage gate.
+- CI enforces a 100% line / 100% branch coverage gate.
 - Tests live in `tests/test_*.c`.
 
 ## Commits
@@ -65,8 +75,7 @@ change is needed, not _what_ the diff already shows.
 - Open an issue first for non-trivial changes so the design can be agreed
   before implementation.
 - Keep PRs focused. One feature or one fix per PR.
-- All CI checks must pass: tests under ASan + UBSan, TSan, release
-  build, coverage gate.
+- All CI checks must pass: tests under ASan + UBSan, TSan, release build, cross build, clang-format, coverage gate and MISRA analysis.
 
 ## When in doubt
 
