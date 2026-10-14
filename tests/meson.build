@@ -32,6 +32,21 @@ test_noatomics_exe = executable(
 )
 test('tickms noatomics', test_noatomics_exe)
 
+# One producer and several readers share the counter. Built for each atomic
+# backend, compiling the core with the same selector, so the TSan job checks
+# both. The no-atomics backend is single-core only and is not run threaded.
+thread_dep = dependency('threads')
+foreach backend : [['gnu', 'TICKMS_USE_GNU_ATOMICS'], ['c11', 'TICKMS_USE_C11_ATOMICS']]
+  mt_exe = executable(
+    'test_tickms_mt_@0@'.format(backend[0]),
+    files('test_tickms_mt.c') + library_sources,
+    include_directories: [public_headers, generated_headers],
+    c_args: ['-D@0@=1'.format(backend[1])],
+    dependencies: [thread_dep],
+  )
+  test('tickms mt @0@'.format(backend[0]), mt_exe, timeout: 120)
+endforeach
+
 foreach tick_ms : [1, 20, 250]
   cfg_test = executable(
     'test_tickms_cfg_@0@ms'.format(tick_ms),
