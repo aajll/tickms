@@ -1,261 +1,75 @@
 # tickms
 
 [![CI](https://github.com/aajll/tickms/actions/workflows/ci.yml/badge.svg)](https://github.com/aajll/tickms/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Configurable tick-based timer system for time measurement, timeout handling, and duration calculation.
+**A wrap-safe millisecond tick counter with timeouts and unit conversions, for embedded C.**
 
-## Features
+## Quick start
 
-- **Configurable tick period**: Set tick duration from 1-1000 ms via `TICKMS_MS_PER_TICK` macro
-- **Wrap-safe elapsed time**: All elapsed time calculations handle 32-bit wrap-around correctly
-- **Multiple time units**: Convert between ticks, milliseconds, microseconds, and seconds
-- **Timer utilities**: Start, restart, check expiry, and calculate remaining time
-- **Concurrency-safe reads**: Atomic operations protect the tick counter; concurrent readers are safe alongside a single writer
-- **Portable atomics**: selects a GCC/Clang `__atomic` path, a C11 `<stdatomic.h>` path, or a `volatile` uniprocessor fallback — auto-detected or consumer-forced
-- **Compile-time validation**: Static assertions catch invalid configurations at compile time
-- **Auditable design**: Small codebase with static allocation, explicit contracts, and unit-test coverage.
-
-## Installation
-
-### As a Meson subproject
-
-```meson
-tickms_dep = dependency('tickms', fallback: ['tickms', 'tickms_dep'])
-```
-
-The project also exports `meson.override_dependency('tickms', ...)`
-so downstream Meson builds can resolve the subproject dependency by name.
-
-For subproject builds, include the public header directly:
+Copy `include/tickms.h`, `include/tickms_conf.h` and `src/tickms.c` into your project, and advance the counter from a periodic interrupt. For a Meson subproject or an installed `pkg-config` package, see the [integration guide](docs/integration.md).
 
 ```c
-#include "tickms.h"
-```
-
-To keep configuration separate from application code, you can optionally use
-the public configuration header before including `tickms.h`:
-
-```c
-#define TICKMS_MS_PER_TICK 1u
-#include "tickms_conf.h"
-#include "tickms.h"
-```
-
-`tickms.h` includes `tickms_conf.h` automatically, so defining
-`TICKMS_MS_PER_TICK` before `tickms.h` also works when you prefer a single
-include.
-
-### As an installed dependency
-
-If the library is installed system-wide, include the namespaced header path:
-
-```c
-#include <tickms/tickms.h>
-```
-
-The public configuration header is also installed as:
-
-```c
-#include <tickms/tickms_conf.h>
-```
-
-If `pkg-config` files are installed in your environment, downstream builds can
-also discover the package as `tickms`.
-
-The generated version header is available as `tickms_version.h` in the
-build tree and as `<tickms/tickms_version.h>` after install.
-
-## Quick Start
-
-```c
-/* Configure tick period before including tickms.h */
-#define TICKMS_MS_PER_TICK 1u
-#include "tickms_conf.h"
+/* Build every file, and tickms.c, with -DTICKMS_MS_PER_TICK=1u. */
 #include "tickms.h"
 
-int main(void)
+/* Called every TICKMS_MS_PER_TICK milliseconds by a timer interrupt. */
+void
+systick_handler(void)
+{
+        (void)tickms_tick_increment();
+}
+
+bool
+wait_for_ready(bool (*ready)(void))
 {
         tickms_tick_t start;
 
-        /* Initialise tickms */
-        tickms_init(0u);
-
-        /* Start a tick counter */
         tickms_start(&start);
-
-        /* ... do work ... */
-
-        /* Check if 500 ms has elapsed */
-        if (tickms_expired_ms(start, 500u)) {
-                /* Timeout occurred */
+        while (!ready()) {
+                if (tickms_expired_ms(start, 500u)) {
+                        return false;
+                }
         }
-
-        /* Get elapsed time in ms */
-        uint32_t elapsed = tickms_elapsed_ms(start);
-
-        return 0;
+        return true;
 }
 ```
 
-## Building
+## Description
 
-```sh
-# Library only (release)
-meson setup build --buildtype=release -Dbuild_tests=false
-meson compile -C build
+`tickms` keeps one 32-bit tick counter that a timer interrupt advances, and answers the questions firmware asks of it: how long since a start tick, has a timeout expired, how much time remains. Elapsed-time arithmetic is unsigned and wraps correctly, so a timeout that spans the counter overflow still works.
 
-# With unit tests
-meson setup build --buildtype=debug -Dbuild_tests=true
-meson compile -C build
-meson test -C build --verbose
-```
+- Tick period from 1 ms to 1000 ms, set at compile time, which must divide 1000; invalid periods fail to compile
+- Wrap-safe elapsed time, expiry and remaining-time helpers in ticks, milliseconds, microseconds and seconds
+- Tick-to-millisecond and second-to-tick conversions that saturate at `UINT32_MAX` instead of wrapping
+- One writer and any number of concurrent readers, through GCC/Clang `__atomic`, C11 `<stdatomic.h>` or a uniprocessor `volatile` backend
+- The atomic backends require a lock-free counter at compile time, so they never call into libatomic
+- No heap and no dependencies beyond the C standard headers
+- 100% line and branch coverage, sanitiser-clean tests, and a MISRA C:2023 baseline from [`misch`](https://pypi.org/project/misch/)
 
-The test suite includes core unit tests, configuration-matrix tests for
-multiple `TICKMS_MS_PER_TICK` values, and an installed-consumer smoke test
-that validates the exported pkg-config package and public headers.
+The counter is a single module-level instance. Writers (the tick source and any call that sets the count) must not run concurrently with each other.
 
-## API Reference
+## Validated toolchains
 
-### Configuration Macros
+| Toolchain               | Target                        | Validation                                 |
+| ----------------------- | ----------------------------- | ------------------------------------------ |
+| GCC, Clang              | Linux hosts                   | Unit, threaded, and sanitiser tests        |
+| Clang                   | 16-bit `msp430`, freestanding | Lock-free checks reject the atomic backends |
+| DSP vendor C11 compiler | 16-bit MAU (`CHAR_BIT == 16`) | Library compile, two object formats        |
 
-| Macro                                                                         | Description                                                                                                                                                                                                                                                                                                                                                                                    |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TICKMS_MS_PER_TICK`                                                          | Tick period in milliseconds (configured via `tickms_conf.h`, default: 10)                                                                                                                                                                                                                                                                                                                      |
-| `TICKMS_USE_GNU_ATOMICS` / `TICKMS_USE_C11_ATOMICS` / `TICKMS_USE_NO_ATOMICS` | Atomic backend selection. Define exactly one consistently for the tickms library build and all consumers; do not override these only in an application using an already-built library. Otherwise the library auto-selects GCC/Clang `__atomic`, then C11 `<stdatomic.h>`, then the uniprocessor `volatile` fallback (the path for toolchains with C11 but no `_Atomic` support, e.g. TI C2000) |
+Target linking, execution, and timing belong to the consuming firmware. See [cross builds](docs/integration.md#cross-builds).
 
-### Constants
+## Documentation
 
-| Macro                  | Description                                          |
-| ---------------------- | ---------------------------------------------------- |
-| `TICKMS_MS_PER_SEC`    | Milliseconds per second (fixed, 1000)                |
-| `TICKMS_TICKS_PER_SEC` | Ticks per second (derived from `TICKMS_MS_PER_TICK`) |
+- [Integration guide](docs/integration.md) — copy-in, Meson subproject, installed package, configuration, and cross builds
+- [API reference](docs/api.md) — every function and macro, with its rules
+- [Design](docs/design.md) — counter model, wrap and saturation rules, atomic backends, and verification
+- [Changelog](CHANGELOG.md) — release history
 
-### Public Configuration Header
+## Contributing
 
-```c
-#define TICKMS_MS_PER_TICK 1u
-#include "tickms_conf.h"
-#include "tickms.h"
-```
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before you open a pull request. Report security issues as described in [SECURITY.md](.github/SECURITY.md).
 
-### Type Definitions
+## License
 
-| Type            | Description                |
-| --------------- | -------------------------- |
-| `tickms_tick_t` | 32-bit unsigned tick count |
-
-### Conversion Macros
-
-| Macro                       | Description                     |
-| --------------------------- | ------------------------------- |
-| `TICKMS_MS_TO_TICKS(ms)`    | Convert ms to ticks (round up)  |
-| `TICKMS_SEC_TO_TICKS(sec)`  | Convert seconds to ticks        |
-| `TICKMS_SEC_TO_MS(sec)`     | Convert seconds to ms           |
-| `TICKMS_SEC_TO_US(sec)`     | Convert seconds to microseconds |
-| `TICKMS_TICKS_TO_MS(ticks)` | Convert ticks to ms             |
-| `TICKMS_TICKS_TO_US(ticks)` | Convert ticks to microseconds   |
-
-### Core Tick Functions
-
-```c
-void tickms_init(tickms_tick_t initial_ticks);
-void tickms_set_ticks(tickms_tick_t ticks);
-tickms_tick_t tickms_get_ticks(void);
-tickms_tick_t tickms_tick_increment(void);
-tickms_tick_t tickms_tick_advance(tickms_tick_t delta);
-```
-
-### Elapsed Time Functions
-
-```c
-static inline uint32_t tickms_elapsed_ms(tickms_tick_t start_ticks);
-static inline uint64_t tickms_elapsed_us(tickms_tick_t start_ticks);
-static inline uint32_t tickms_elapsed_sec(tickms_tick_t start_ticks);
-static inline tickms_tick_t tickms_elapsed_ticks(tickms_tick_t start_ticks);
-```
-
-### Tick Control Functions
-
-```c
-static inline void tickms_start(tickms_tick_t *t);
-static inline void tickms_restart(tickms_tick_t *t);
-static inline bool tickms_expired(tickms_tick_t start, tickms_tick_t timeout);
-static inline bool tickms_expired_ms(tickms_tick_t start, uint32_t timeout_ms);
-static inline bool tickms_expired_sec(tickms_tick_t start, uint32_t timeout_sec);
-static inline tickms_tick_t tickms_remaining(tickms_tick_t start, tickms_tick_t timeout);
-static inline bool tickms_has_elapsed_since(tickms_tick_t start_ticks, tickms_tick_t duration_ticks);
-```
-
-### Conversion Functions
-
-```c
-static inline uint32_t tickms_ticks_to_ms(tickms_tick_t ticks);
-static inline float tickms_ticks_to_seconds_f(tickms_tick_t ticks);
-static inline float tickms_elapsed_seconds_since(tickms_tick_t start_ticks);
-static inline tickms_tick_t tickms_ms_to_ticks_floor(uint32_t ms);
-static inline tickms_tick_t tickms_ms_to_ticks_ceil(uint32_t ms);
-static inline tickms_tick_t tickms_sec_to_ticks_saturated(uint32_t seconds);
-static inline tickms_tick_t tickms_seconds_to_ticks_nearest(float seconds);
-```
-
-### Current Time Functions
-
-```c
-static inline uint32_t tickms_current_ms(void);
-static inline uint64_t tickms_current_us(void);
-static inline uint32_t tickms_current_sec(void);
-```
-
-## Use Cases
-
-- **Operation timeout**: Monitor if an operation exceeds a time limit
-
-  ```c
-  tickms_tick_t start;
-  tickms_start(&start);
-  while (!tickms_expired_ms(start, 1000u)) {
-          /* wait for operation */
-  }
-  ```
-
-- **Periodic task execution**: Run code at regular intervals
-
-  ```c
-  tickms_tick_t last = tickms_get_ticks();
-  while (1) {
-          if (tickms_elapsed_ms(last) >= 100u) {
-                  periodic_task();
-                  last = tickms_get_ticks();
-          }
-  }
-  ```
-
-- **Duration measurement**: Measure how long an operation takes
-
-  ```c
-  tickms_tick_t start;
-  tickms_start(&start);
-  expensive_operation();
-  uint32_t duration = tickms_elapsed_ms(start);
-  ```
-
-- **Debouncing**: Ignore rapid successive events
-  ```c
-  static tickms_tick_t last_event = 0;
-  if (tickms_elapsed_ms(last_event) > DEBOUNCE_MS) {
-          handle_event();
-          last_event = tickms_get_ticks();
-  }
-  ```
-
-## Notes
-
-| Topic              | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tick period**    | Must divide 1000 evenly (1, 2, 4, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000 ms)                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| **Wrap-around**    | All elapsed time functions handle 32-bit overflow correctly                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Thread safety**  | Atomic operations protect the tick counter; safe for concurrent reads with a single writer — multiple concurrent writers must be externally serialised                                                                                                                                                                                                                                                                                                                                                          |
-| **Saturation**     | Conversion functions, and the `TICKMS_TICKS_TO_MS` and `TICKMS_SEC_TO_TICKS` macros, saturate at UINT32_MAX instead of wrapping; `TICKMS_MS_TO_TICKS` does not wrap for any 32-bit input                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **Initialisation** | Call `tickms_init()` once before any other tick functions                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| **Tick updates**   | Increment ticks from a periodic interrupt or tick callback                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| **Atomic backend** | All atomics route through `tickms_conf.h` macros (`__atomic`, C11, or uniprocessor fallback). The default auto-selects GCC/Clang `__atomic` on GCC/Clang, C11 `<stdatomic.h>` on conforming C11 toolchains, and `volatile` with no fences as a degenerate uniprocessor fallback. Define exactly one of `TICKMS_USE_GNU_ATOMICS`, `TICKMS_USE_C11_ATOMICS`, or `TICKMS_USE_NO_ATOMICS` to override. The `volatile` backend is correct only when readers and the writer cannot run concurrently on separate cores. The `__atomic` and C11 backends fail to compile on a target where the 32-bit counter is not lock-free (8-bit and 16-bit cores, ARMv6-M) instead of calling into libatomic; select `TICKMS_USE_NO_ATOMICS` there |
+MIT. See [LICENSE](LICENSE).

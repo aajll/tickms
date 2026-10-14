@@ -138,6 +138,21 @@ if clang.found()
   )
 endif
 
+# Every C example in the README and docs/ compiles against the real header,
+# so a changed signature or macro fails here instead of in a reader's build.
+test('tickms docs examples', python,
+     args: [files('docs/check_snippets.py'),
+            '--root', meson.project_source_root(),
+            '--lang', 'c',
+            '--prelude', '#include "tickms.h"',
+            '--']
+           + cc.cmd_array()
+           + ['-std=c11', '-Wall', '-Wextra', '-Wpedantic', '-Werror',
+              '-Wno-unused-function', '-Wno-unused-variable',
+              '-I' + (meson.project_source_root() / 'include'),
+              '-c', '{source}', '-o', '{object}'],
+     timeout: 60)
+
 # The smoke test installs libtickms.a and links it from a plain consumer
 # project that carries no sanitizer or coverage flags. Instrumented static
 # archives embed sanitizer/gcov runtime symbols that the consumer linker

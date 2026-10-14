@@ -16,10 +16,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A threaded test with one producer and several readers for the `__atomic` and C11 backends, and a ThreadSanitizer CI job that runs it.
 - A clang-format CI job with the formatter pinned in `scripts/format.sh`.
 - MISRA C:2023 analysis with misch for each atomic backend. CI fails on findings that are not in the baselines under `analysis/baseline/`.
+- A test that compiles every C example in `README.md` and `docs/` against the header.
 - A CI job that cross-builds the library with warnings as errors for a 16-bit-MAU target (`CHAR_BIT == 16`) with two compiler releases, under both object formats.
 
 ### Changed
 
+- The README is a short landing page. Integration, configuration, API, and design detail is in `docs/integration.md`, `docs/api.md`, and `docs/design.md`.
 - CI installs Meson, Ninja, gcovr and misch with `uv` instead of `pip`.
 - The CI coverage gate is 100% line and 100% branch, up from 80% and 70%.
 - The `__atomic` and C11 backends fail to compile when `tickms_tick_t` is not lock-free on the target, instead of routing every tick through libatomic or a user-supplied helper. 8-bit and 16-bit cores and ARMv6-M select `TICKMS_USE_NO_ATOMICS`.
