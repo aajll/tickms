@@ -9,7 +9,7 @@ project(
   license: 'MIT',
 )
 
-project_description = 'Configurable tick-based timer system for time measurement, timeout handling, and, duration calculation.'
+project_description = 'Configurable tick-based timer system for time measurement, timeout handling, and duration calculation.'
 
 ver = meson.project_version().split('.')
 major = ver[0].to_int()
