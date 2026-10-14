@@ -26,7 +26,7 @@
  *    - Atomic operations protect the tick counter value itself; they do not
  *      impose ordering on unrelated shared application state.
  *
- *    This module is designed with MISRA C:2012 and IEC-61508 in mind:
+ *    Design rules:
  *    - Consistent use of fixed-width types
  *    - No implicit type conversions
  *    - Explicit overflow handling

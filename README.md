@@ -13,7 +13,7 @@ Configurable tick-based timer system for time measurement, timeout handling, and
 - **Concurrency-safe reads**: Atomic operations protect the tick counter; concurrent readers are safe alongside a single writer
 - **Portable atomics**: selects a GCC/Clang `__atomic` path, a C11 `<stdatomic.h>` path, or a `volatile` uniprocessor fallback — auto-detected or consumer-forced
 - **Compile-time validation**: Static assertions catch invalid configurations at compile time
-- **Compliance-aware design goals**: Small auditable codebase with static allocation, explicit contracts, and unit-test coverage.
+- **Auditable design**: Small codebase with static allocation, explicit contracts, and unit-test coverage.
 
 ## Installation
 
