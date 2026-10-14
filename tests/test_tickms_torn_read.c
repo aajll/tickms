@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: MIT
+ *
  * @file test_tickms_torn_read.c
  * @brief Torn-read rejection in the no-atomics backend.
  *

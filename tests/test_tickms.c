@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: MIT
+ *
  * @file test_tickms.c
  * @brief Unit tests for tickms.
  */

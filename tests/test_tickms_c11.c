@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: MIT
+ *
  * @file test_tickms_c11.c
  * @brief Exercises the C11 `<stdatomic.h>` atomic backend.
  *

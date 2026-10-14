@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: MIT
+ *
  * @file test_tickms_noatomics.c
  * @brief Exercises the degenerate uniprocessor (volatile) atomic backend.
  *
@@ -93,7 +95,6 @@ main(void)
         run_test(test_noatomics_elapsed_ms, "noatomics_elapsed_ms");
         run_test(test_noatomics_wrap_around, "noatomics_wrap_around");
 
-        fprintf(stdout,
-                "\n=== all no-atomics backend tests passed ===\n\n");
+        fprintf(stdout, "\n=== all no-atomics backend tests passed ===\n\n");
         return EXIT_SUCCESS;
 }
