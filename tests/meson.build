@@ -80,6 +80,38 @@ foreach tick_ms : [0, 3, 1001]
   )
 endforeach
 
+# The atomic backends reject a target whose 32-bit atomics need a lock. Clang
+# can compile for a 16-bit target without a cross toolchain, so the check is
+# exercised here: both atomic backends must fail with the tickms diagnostic,
+# and the no-atomics backend must compile.
+clang = find_program('clang', required: false)
+if clang.found()
+  probe_args = [
+    '--target=msp430',
+    '-ffreestanding',
+    '-std=c11',
+    '-fsyntax-only',
+    '-Wall',
+    '-Wextra',
+    '-Wpedantic',
+    '-Werror',
+    '-I' + (meson.project_source_root() / 'include'),
+    meson.current_source_dir() / 'lock_free_probe.c',
+  ]
+  foreach backend : ['TICKMS_USE_GNU_ATOMICS', 'TICKMS_USE_C11_ATOMICS']
+    probe = run_command(clang, '-D@0@=1'.format(backend), probe_args, check: false)
+    assert(
+      probe.returncode() != 0 and probe.stderr().contains('tickms: tickms_tick_t is not'),
+      '@0@ must reject a target without lock-free 32-bit atomics'.format(backend),
+    )
+  endforeach
+  probe = run_command(clang, '-DTICKMS_USE_NO_ATOMICS=1', probe_args, check: false)
+  assert(
+    probe.returncode() == 0,
+    'TICKMS_USE_NO_ATOMICS must compile on a 16-bit target: ' + probe.stderr(),
+  )
+endif
+
 # The smoke test installs libtickms.a and links it from a plain consumer
 # project that carries no sanitizer or coverage flags. Instrumented static
 # archives embed sanitizer/gcov runtime symbols that the consumer linker

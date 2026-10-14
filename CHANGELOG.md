@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The `__atomic` and C11 backends fail to compile when `tickms_tick_t` is not lock-free on the target, instead of routing every tick through libatomic or a user-supplied helper. 8-bit and 16-bit cores and ARMv6-M select `TICKMS_USE_NO_ATOMICS`.
+
 ## [1.3.0] - 2026-06-10
 
 ### Added
