@@ -269,7 +269,9 @@ void tickms_set_ticks(tickms_tick_t ticks);
  *
  * @note
  *    This is an atomic snapshot of the counter value only. It does not imply
- *    ordering for unrelated shared application data.
+ *    ordering for unrelated shared application data. Under
+ *    TICKMS_USE_NO_ATOMICS it re-reads the counter until two consecutive
+ *    reads agree; see TICKMS_USE_NO_ATOMICS for the remaining constraint.
  *
  * @return Current tick count.
  */

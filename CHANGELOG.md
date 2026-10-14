@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `tickms_get_ticks()` under `TICKMS_USE_NO_ATOMICS` re-reads the counter until two consecutive reads agree, so a tick that lands between the partial reads of an 8-bit or 16-bit core no longer returns a torn value.
 - `TICKMS_TICKS_TO_MS` and `TICKMS_SEC_TO_TICKS` saturate at `UINT32_MAX` like `tickms_ticks_to_ms()` and `tickms_sec_to_ticks_saturated()`, and `TICKMS_MS_TO_TICKS` no longer wraps for inputs near `UINT32_MAX`. The two saturating macros evaluate their argument more than once.
 
 ### Added
