@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `TICKMS_TICKS_TO_MS` and `TICKMS_SEC_TO_TICKS` saturate at `UINT32_MAX` like `tickms_ticks_to_ms()` and `tickms_sec_to_ticks_saturated()`, and `TICKMS_MS_TO_TICKS` no longer wraps for inputs near `UINT32_MAX`. The two saturating macros evaluate their argument more than once.
 
+### Added
+
+- A threaded test with one producer and several readers for the `__atomic` and C11 backends, and a ThreadSanitizer CI job that runs it.
+
 ### Changed
 
 - The `__atomic` and C11 backends fail to compile when `tickms_tick_t` is not lock-free on the target, instead of routing every tick through libatomic or a user-supplied helper. 8-bit and 16-bit cores and ARMv6-M select `TICKMS_USE_NO_ATOMICS`.
