@@ -1,53 +1,53 @@
 {
   "schema": "misch/baseline@2",
   "fingerprints": {
-    "325d72df959d": {
-      "rule_id": "misra-c2012-17.3",
-      "file": "src/tickms.c",
-      "message": "A function shall not be declared implicitly",
-      "count": 2
-    },
-    "50c6b431ac81": {
-      "rule_id": "misra-c2012-15.5",
-      "file": "include/tickms.h",
-      "message": "A function should have a single point of exit at the end",
-      "count": 2
-    },
-    "647c574d9a08": {
+    "09f5bb4c1d63": {
       "rule_id": "misra-c2012-2.5",
-      "file": "include/tickms.h",
-      "message": "A project should not contain unused macro definitions",
-      "count": 6
-    },
-    "85865803b532": {
-      "rule_id": "misra-c2012-2.5",
-      "file": "include/tickms_conf.h",
-      "message": "A project should not contain unused macro definitions",
-      "count": 3
-    },
-    "ab140f11b3c7": {
-      "rule_id": "misra-c2012-8.7",
       "file": "src/tickms.c",
-      "message": "Functions and objects should not be defined with external linkage if they are referenced in only one translation unit",
-      "count": 4
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 1
     },
-    "ad3bd41e246a": {
-      "rule_id": "misra-c2012-12.1",
-      "file": "include/tickms.h",
-      "message": "The precedence of operators within expressions should be made explicit",
-      "count": 4
-    },
-    "c8f4d21363a8": {
+    "7df17a334039": {
       "rule_id": "misra-c2012-10.8",
       "file": "include/tickms.h",
-      "message": "The value of a composite expression shall not be cast to a different essential type category or a wider essential type",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
       "count": 2
     },
-    "e77999ee613f": {
-      "rule_id": "misra-c2012-2.5",
+    "a109f611a6bf": {
+      "rule_id": "misra-c2012-12.1",
+      "file": "include/tickms.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 4
+    },
+    "a14f9985b594": {
+      "rule_id": "misra-c2012-8.7",
       "file": "src/tickms.c",
-      "message": "A project should not contain unused macro definitions",
-      "count": 1
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 4
+    },
+    "ae1514b0a8c2": {
+      "rule_id": "misra-c2012-2.5",
+      "file": "include/tickms_conf.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 3
+    },
+    "ee4de8187c08": {
+      "rule_id": "misra-c2012-2.5",
+      "file": "include/tickms.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 6
+    },
+    "f16efb2b5ac5": {
+      "rule_id": "misra-c2012-17.3",
+      "file": "src/tickms.c",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 2
+    },
+    "f673e9c52de8": {
+      "rule_id": "misra-c2012-15.5",
+      "file": "include/tickms.h",
+      "message": "misra violation (use --rule-texts=<file> to get proper output)",
+      "count": 2
     }
   }
 }

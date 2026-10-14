@@ -40,7 +40,9 @@ outputs = ["terminal"]
 [baseline]
 # Findings recorded when misch was adopted. CI fails only on findings that are
 # not in the baseline, so existing code is unchanged and new code is held to
-# zero. Regenerate with `misch baseline` after fixing a recorded finding.
+# zero. Regenerate with `misch baseline` after fixing a recorded finding, with
+# MISRA_RULE_TEXTS unset: the rule texts change the finding messages that the
+# baseline fingerprints, and CI runs without them.
 path = "analysis/baseline/misra-baseline.json"
 
 # The default analysis follows the GCC/Clang __atomic backend that the Meson
