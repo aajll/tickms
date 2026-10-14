@@ -123,6 +123,33 @@ _Static_assert(TICKMS_TICKS_PER_SEC != 0u,
  */
 typedef uint32_t tickms_tick_t;
 
+/*
+ * The atomic backends must not need a lock for the counter. A target without
+ * native 32-bit atomics (8-bit and 16-bit cores, ARMv6-M) would otherwise
+ * route every tick through libatomic or a user-supplied helper. Such targets
+ * select TICKMS_USE_NO_ATOMICS instead.
+ */
+#if defined(TICKMS_USE_GNU_ATOMICS)
+/* __atomic_always_lock_free is a compile-time constant but not an integer
+ * constant expression, so -Wpedantic objects to it inside _Static_assert. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+_Static_assert(__atomic_always_lock_free(sizeof(tickms_tick_t), 0),
+               "tickms: tickms_tick_t is not lock-free on this target; "
+               "define TICKMS_USE_NO_ATOMICS");
+#pragma GCC diagnostic pop
+#elif defined(TICKMS_USE_C11_ATOMICS)
+/* C11 has no size-based compile-time query, so match the counter width to
+ * the ATOMIC_*_LOCK_FREE macro of the same size and require "always" (2). */
+_Static_assert(
+    (sizeof(tickms_tick_t) == sizeof(int) && ATOMIC_INT_LOCK_FREE == 2)
+        || (sizeof(tickms_tick_t) == sizeof(long) && ATOMIC_LONG_LOCK_FREE == 2)
+        || (sizeof(tickms_tick_t) == sizeof(long long)
+            && ATOMIC_LLONG_LOCK_FREE == 2),
+    "tickms: tickms_tick_t is not always lock-free on this "
+    "target; define TICKMS_USE_NO_ATOMICS");
+#endif
+
 /* ================ MACROS ================================================== */
 
 /**

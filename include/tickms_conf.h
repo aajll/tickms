@@ -81,6 +81,10 @@
  * cores, or on targets with equivalent ordering guarantees. This backend uses
  * a volatile counter and no hardware fences. Define exactly one backend-
  * selection macro consistently for the tickms library build and all consumers.
+ *
+ * The other backends fail to compile where the 32-bit counter is not
+ * lock-free, such as 8-bit and 16-bit cores and ARMv6-M; this backend is the
+ * one to select there.
  */
 
 /*
