@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `tickms.h` defines `TICKMS_VERSION_MAJOR`, `_MINOR`, `_PATCH`, `TICKMS_VERSION`, `TICKMS_VERSION_STRING` and a new `TICKMS_VERSION_NUMBER` (`long`, `MAJOR * 10000 + MINOR * 100 + PATCH`), so a copied-in header carries its version. `tickms_version.h` is no longer generated; it is installed as a deprecated header that includes `tickms.h`. Meson fails to configure when the header and `project(version:)` disagree, and the build needs Meson 0.57 or later.
 - The README is a short landing page. Integration, configuration, API, and design detail is in `docs/integration.md`, `docs/api.md`, and `docs/design.md`.
 - CI installs Meson, Ninja, gcovr and misch with `uv` instead of `pip`.
 - The CI coverage gate is 100% line and 100% branch, up from 80% and 70%.

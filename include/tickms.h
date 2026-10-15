@@ -60,6 +60,32 @@ extern "C" {
 /* Include configuration header first */
 #include "tickms_conf.h"
 
+/* ================ VERSION ================================================= */
+
+/**
+ * @name Version
+ * @brief Release of this header, for diagnostics and @c #if checks.
+ *
+ * @details
+ *    @c TICKMS_VERSION_NUMBER is @c MAJOR*10000 @c + @c MINOR*100 @c + @c PATCH
+ *    with type @c long, so it cannot overflow where @c int is 16 bits. The
+ *    Meson build fails to configure when these values differ from the
+ *    project version.
+ * @{
+ */
+/* cppcheck-suppress-begin misra-c2012-2.5 ; @deviation Public version macros
+ * for consumer diagnostics and #if checks; the library does not use them. */
+#define TICKMS_VERSION_MAJOR  1
+#define TICKMS_VERSION_MINOR  3
+#define TICKMS_VERSION_PATCH  0
+#define TICKMS_VERSION        "1.3.0"
+#define TICKMS_VERSION_STRING TICKMS_VERSION
+#define TICKMS_VERSION_NUMBER                                                  \
+        ((TICKMS_VERSION_MAJOR * 10000L) + (TICKMS_VERSION_MINOR * 100L)       \
+         + TICKMS_VERSION_PATCH)
+/* cppcheck-suppress-end misra-c2012-2.5 ; @deviation As above. */
+/** @} */
+
 /* ================ DEFINES ================================================= */
 
 /* ---------------- Configuration ------------------------------------------- */
