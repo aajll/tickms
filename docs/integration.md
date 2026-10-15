@@ -23,7 +23,7 @@ Compile `tickms.c` with your other sources and include the header:
 #include "tickms.h"
 ```
 
-No generated header is needed. `tickms_version.h` exists only in Meson builds.
+No generated header is needed. `tickms.h` defines the version macros described in [api.md](api.md#version).
 
 ## Meson subproject
 
@@ -49,8 +49,9 @@ After installation the headers live in a `tickms/` subdirectory:
 <!-- snippet: skip -->
 ```c
 #include <tickms/tickms.h>
-#include <tickms/tickms_version.h>
 ```
+
+`tickms_version.h` is installed beside it as a deprecated header that includes `tickms.h`.
 
 ## Configuration
 

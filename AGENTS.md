@@ -41,7 +41,7 @@ scripts/format.sh --fix    # rewrite in place
 
 ### 1.2 Notes
 
-- `meson setup` generates `tickms_version.h` into the build directory. The library sources do not include it; copy-in needs only `include/tickms.h`, `include/tickms_conf.h`, and `src/tickms.c`.
+- `include/tickms.h` defines the version macros, and `meson setup` fails when they differ from `project(version:)`, so a release updates both. `include/tickms_version.h` is a deprecated header that includes `tickms.h`. Copy-in needs only `include/tickms.h`, `include/tickms_conf.h`, and `src/tickms.c`.
 - The installed-consumer smoke test is skipped in sanitiser and coverage builds, because instrumented archives do not link into an uninstrumented consumer.
 - The 16-bit lock-free probe in `tests/meson.build` runs only when `clang` is on the path.
 

@@ -100,6 +100,10 @@ main(void)
                 return 1;
         }
 
+        if (TICKMS_VERSION_NUMBER < 10000L) {
+                return 1;
+        }
+
         return 0;
 }
 """

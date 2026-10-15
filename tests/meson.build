@@ -5,7 +5,7 @@ test_exe = executable(
   'test_tickms',
   files('test_tickms.c'),
   dependencies: [tickms_dep],
-  include_directories: [public_headers, generated_headers],
+  include_directories: [public_headers],
 )
 
 test('tickms module', test_exe)
@@ -16,7 +16,7 @@ test('tickms module', test_exe)
 test_c11_exe = executable(
   'test_tickms_c11',
   files('test_tickms_c11.c') + library_sources,
-  include_directories: [public_headers, generated_headers],
+  include_directories: [public_headers],
   c_args: ['-DTICKMS_USE_C11_ATOMICS=1'],
 )
 test('tickms c11', test_c11_exe)
@@ -27,7 +27,7 @@ test('tickms c11', test_c11_exe)
 test_noatomics_exe = executable(
   'test_tickms_noatomics',
   files('test_tickms_noatomics.c') + library_sources,
-  include_directories: [public_headers, generated_headers],
+  include_directories: [public_headers],
   c_args: ['-DTICKMS_USE_NO_ATOMICS=1'],
 )
 test('tickms noatomics', test_noatomics_exe)
@@ -38,7 +38,7 @@ test('tickms noatomics', test_noatomics_exe)
 test_torn_read_exe = executable(
   'test_tickms_torn_read',
   files('test_tickms_torn_read.c'),
-  include_directories: [public_headers, generated_headers],
+  include_directories: [public_headers],
   c_args: ['-DTICKMS_USE_NO_ATOMICS=1'],
 )
 test('tickms torn read', test_torn_read_exe)
@@ -51,7 +51,7 @@ foreach backend : [['gnu', 'TICKMS_USE_GNU_ATOMICS'], ['c11', 'TICKMS_USE_C11_AT
   mt_exe = executable(
     'test_tickms_mt_@0@'.format(backend[0]),
     files('test_tickms_mt.c') + library_sources,
-    include_directories: [public_headers, generated_headers],
+    include_directories: [public_headers],
     c_args: ['-D@0@=1'.format(backend[1])],
     dependencies: [thread_dep],
   )
@@ -63,7 +63,7 @@ foreach tick_ms : [1, 20, 250]
     'test_tickms_cfg_@0@ms'.format(tick_ms),
     files('test_tickms_config_matrix.c'),
     dependencies: [tickms_dep],
-    include_directories: [public_headers, generated_headers],
+    include_directories: [public_headers],
     c_args: [
       '-DTICKMS_MS_PER_TICK=@0@u'.format(tick_ms),
       '-DEXPECTED_TICKMS_MS_PER_TICK=@0@u'.format(tick_ms),

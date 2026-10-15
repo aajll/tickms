@@ -2,6 +2,7 @@ project(
   'tickms',
   'c',
   version: '1.3.0',
+  meson_version: '>=0.57.0',
   default_options: [
     'c_std=c11',
     'warning_level=3',
@@ -11,43 +12,49 @@ project(
 
 project_description = 'Configurable tick-based timer system for time measurement, timeout handling, and duration calculation.'
 
-ver = meson.project_version().split('.')
-major = ver[0].to_int()
-minor = ver[1].to_int()
-patch = ver[2].to_int()
+# === Version ==================================================================
+# include/tickms.h defines the version macros, so a copy-in build has them.
+# Configuration fails when they differ from the project version.
 
-conf = configuration_data()
-conf.set_quoted('VERSION', meson.project_version())
-conf.set('MAJOR', major)
-conf.set('MINOR', minor)
-conf.set('PATCH', patch)
-
-generated_version_header = configure_file(
-  input: 'config' / 'tickms_version.h.in',
-  output: 'tickms_version.h',
-  configuration: conf,
-  install: true,
-  install_dir: get_option('includedir') / 'tickms',
-)
+fs = import('fs')
+version_parts = meson.project_version().split('.')
+version_macros = {
+  'TICKMS_VERSION_MAJOR': version_parts[0],
+  'TICKMS_VERSION_MINOR': version_parts[1],
+  'TICKMS_VERSION_PATCH': version_parts[2],
+  'TICKMS_VERSION': '"' + meson.project_version() + '"',
+}
+header_lines = []
+foreach line : fs.read('include' / 'tickms.h').split('\n')
+  header_lines += ' '.join(line.split())
+endforeach
+foreach name, value : version_macros
+  if '#define @0@ @1@'.format(name, value) not in header_lines
+    error('include/tickms.h must define @0@ as @1@'.format(name, value))
+  endif
+endforeach
 
 public_headers = include_directories('include')
-generated_headers = include_directories('.')
 
 library_sources = files('src/tickms.c')
 
 tickms_lib = static_library(
   'tickms',
   library_sources,
-  include_directories: [public_headers, generated_headers],
+  include_directories: [public_headers],
   install: true,
 )
 
-install_headers('include/tickms.h', 'include/tickms_conf.h', subdir: 'tickms')
+install_headers(
+  'include/tickms.h',
+  'include/tickms_conf.h',
+  'include/tickms_version.h',
+  subdir: 'tickms',
+)
 
 tickms_dep = declare_dependency(
-  include_directories: [public_headers, generated_headers],
+  include_directories: [public_headers],
   link_with: tickms_lib,
-  sources: generated_version_header,
 )
 
 meson.override_dependency('tickms', tickms_dep)
