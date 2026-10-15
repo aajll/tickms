@@ -150,6 +150,16 @@ jobs:
             meson compile -C "build-$abi"
           done
 
+      - name: Check the conversion macros with a 16-bit int
+        run: |
+          CGT="$HOME/ti/ti-cgt-c2000_${{ matrix.cgt }}.LTS"
+          for abi in coffabi eabi; do
+            "$CGT/bin/cl2000" -v28 --float_support=fpu32 --abi=$abi --c11 \
+              --emit_warnings_as_errors -I"$CGT/include" -Iinclude \
+              --compile_only --output_file="int16_probe-$abi.obj" \
+              tests/int16_probe.c
+          done
+
   # ---------------------------------------------------------------------------
   # Enforce clang-format on all hand-written sources. scripts/format.sh pins
   # the clang-format release and runs it through uvx, so CI and local checks

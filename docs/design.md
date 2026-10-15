@@ -83,7 +83,7 @@ The writer's read-modify-write is not atomic either. If a reader can itself inte
 
 - C11 with `<stdint.h>`, `<stdbool.h>`, `<stddef.h>`, and `<limits.h>`. No other library dependencies.
 - No `uint8_t`, so the library builds where `CHAR_BIT` is 16.
-- Arithmetic is in `tickms_tick_t` or `uint64_t`, so it does not depend on the width of `int`. The exception is `TICKMS_SEC_TO_MS`, which multiplies in the promoted type of its argument; the [API reference](api.md#conversion-macros) gives the rule.
+- Arithmetic is in `tickms_tick_t` or `uint64_t`, so it does not depend on the width of `int`.
 - The `float` helpers need single-precision floating point. A `float` represents tick counts exactly only up to 2^24.
 
 ## Verification

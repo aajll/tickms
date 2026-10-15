@@ -130,11 +130,11 @@ TICKMS_MS_TO_TICKS(ms)        /* round up, as tickms_ms_to_ticks_ceil     */
 TICKMS_SEC_TO_TICKS(sec)      /* saturating, as tickms_sec_to_ticks_saturated */
 TICKMS_TICKS_TO_MS(ticks)     /* saturating, as tickms_ticks_to_ms        */
 TICKMS_TICKS_TO_US(ticks)     /* uint64_t microseconds                     */
-TICKMS_SEC_TO_MS(sec)         /* uint32_t milliseconds                     */
+TICKMS_SEC_TO_MS(sec)         /* saturating uint32_t milliseconds          */
 TICKMS_SEC_TO_US(sec)         /* uint64_t microseconds                     */
 ```
 
-The macros are constant expressions, for static initialisers and array sizes. `TICKMS_SEC_TO_TICKS` and `TICKMS_TICKS_TO_MS` evaluate their argument more than once, so pass arguments without side effects or call the matching function. `TICKMS_SEC_TO_MS` multiplies in the promoted type of `sec` and narrows to `uint32_t`; pass a `uint32_t`, and keep `sec` below 4 294 968 so the result fits.
+The macros are constant expressions, for static initialisers and array sizes. `TICKMS_SEC_TO_TICKS`, `TICKMS_TICKS_TO_MS` and `TICKMS_SEC_TO_MS` evaluate their argument more than once, so pass arguments without side effects or call the matching function. `TICKMS_SEC_TO_MS` multiplies in 64 bits whatever the width of `int` and saturates at `UINT32_MAX`, which it reaches from 4 294 968 seconds.
 
 <!-- snippet: body -->
 ```c

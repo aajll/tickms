@@ -213,9 +213,14 @@ _Static_assert(
  * @brief Convert seconds to milliseconds (integer, truncating fractional part).
  *
  * @param sec       Time in seconds.
- * @return          Milliseconds.
+ * @return          Milliseconds, saturated at UINT32_MAX.
+ *
+ * @note The product is formed in 64 bits, so the result does not depend on
+ *       the width of `int`. `sec` is evaluated more than once; pass an
+ *       argument without side effects.
  */
-#define TICKMS_SEC_TO_MS(sec) ((uint32_t)((sec) * TICKMS_MS_PER_SEC))
+#define TICKMS_SEC_TO_MS(sec)                                                  \
+        TICKMS__SATURATE_U32((sec) * (uint64_t)TICKMS_MS_PER_SEC)
 
 /**
  * @def TICKMS_SEC_TO_US(sec)

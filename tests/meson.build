@@ -112,7 +112,7 @@ endforeach
 # and the no-atomics backend must compile.
 clang = find_program('clang', required: false)
 if clang.found()
-  probe_args = [
+  probe_flags = [
     '--target=msp430',
     '-ffreestanding',
     '-std=c11',
@@ -122,8 +122,8 @@ if clang.found()
     '-Wpedantic',
     '-Werror',
     '-I' + (meson.project_source_root() / 'include'),
-    meson.current_source_dir() / 'lock_free_probe.c',
   ]
+  probe_args = probe_flags + [meson.current_source_dir() / 'lock_free_probe.c']
   foreach backend : ['TICKMS_USE_GNU_ATOMICS', 'TICKMS_USE_C11_ATOMICS']
     probe = run_command(clang, '-D@0@=1'.format(backend), probe_args, check: false)
     assert(
@@ -135,6 +135,20 @@ if clang.found()
   assert(
     probe.returncode() == 0,
     'TICKMS_USE_NO_ATOMICS must compile on a 16-bit target: ' + probe.stderr(),
+  )
+
+  # The same target has a 16-bit int, so the conversion macros must not wrap
+  # in the width of int.
+  probe = run_command(
+    clang,
+    '-DTICKMS_USE_NO_ATOMICS=1',
+    probe_flags,
+    meson.current_source_dir() / 'int16_probe.c',
+    check: false,
+  )
+  assert(
+    probe.returncode() == 0,
+    'The conversion macros must not wrap where int is 16 bits: ' + probe.stderr(),
   )
 endif
 
