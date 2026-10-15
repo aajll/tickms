@@ -51,8 +51,6 @@ After installation the headers live in a `tickms/` subdirectory:
 #include <tickms/tickms.h>
 ```
 
-`tickms_version.h` is installed beside it as a deprecated header that includes `tickms.h`.
-
 ## Configuration
 
 Every translation unit that includes `tickms.h`, and the build of `tickms.c` itself, must see the same configuration. Set it with compiler flags, or in a project header included before `tickms.h`.

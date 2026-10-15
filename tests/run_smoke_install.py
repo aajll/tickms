@@ -81,7 +81,6 @@ executable('tickms_smoke', 'main.c', dependencies: [tickms_dep])
             """#define TICKMS_MS_PER_TICK 20u
 #include <tickms/tickms_conf.h>
 #include <tickms/tickms.h>
-#include <tickms/tickms_version.h>
 
 int
 main(void)

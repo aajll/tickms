@@ -162,4 +162,4 @@ static const tickms_tick_t debounce_ticks = TICKMS_MS_TO_TICKS(50u);
 #endif
 ```
 
-`TICKMS_VERSION_STRING` is the same string as `TICKMS_VERSION`. `tickms_version.h` is a deprecated header that includes `tickms.h`, kept so existing includes compile until the next major release.
+`TICKMS_VERSION_STRING` is the same string as `TICKMS_VERSION`.

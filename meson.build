@@ -48,7 +48,6 @@ tickms_lib = static_library(
 install_headers(
   'include/tickms.h',
   'include/tickms_conf.h',
-  'include/tickms_version.h',
   subdir: 'tickms',
 )
 
