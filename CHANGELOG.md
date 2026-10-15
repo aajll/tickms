@@ -21,11 +21,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- `tickms.h` defines `TICKMS_VERSION_MAJOR`, `_MINOR`, `_PATCH`, `TICKMS_VERSION`, `TICKMS_VERSION_STRING` and a new `TICKMS_VERSION_NUMBER` (`long`, `MAJOR * 10000 + MINOR * 100 + PATCH`), so a copied-in header carries its version. `tickms_version.h` is no longer generated; it is installed as a deprecated header that includes `tickms.h`. Meson fails to configure when the header and `project(version:)` disagree, and the build needs Meson 0.57 or later.
+- `tickms.h` defines `TICKMS_VERSION_MAJOR`, `_MINOR`, `_PATCH`, `TICKMS_VERSION`, `TICKMS_VERSION_STRING` and a new `TICKMS_VERSION_NUMBER` (`long`, `MAJOR * 10000 + MINOR * 100 + PATCH`), so a copied-in header carries its version. Meson fails to configure when the header and `project(version:)` disagree, and the build needs Meson 0.57 or later.
 - The README is a short landing page. Integration, configuration, API, and design detail is in `docs/integration.md`, `docs/api.md`, and `docs/design.md`.
 - CI installs Meson, Ninja, gcovr and misch with `uv` instead of `pip`.
 - The CI coverage gate is 100% line and 100% branch, up from 80% and 70%.
 - The `__atomic` and C11 backends fail to compile when `tickms_tick_t` is not lock-free on the target, instead of routing every tick through libatomic or a user-supplied helper. 8-bit and 16-bit cores and ARMv6-M select `TICKMS_USE_NO_ATOMICS`.
+
+### Removed
+
+- `tickms_version.h`. `tickms.h` defines the version macros.
 
 ## [1.3.0] - 2026-06-10
 
