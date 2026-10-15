@@ -345,6 +345,10 @@ TEST_CASE(test_tickms_macro_sec_to_ms)
 {
         TEST_ASSERT(TICKMS_SEC_TO_MS(1u) == 1000u);
         TEST_ASSERT(TICKMS_SEC_TO_MS(2u) == 2000u);
+        TEST_ASSERT(TICKMS_SEC_TO_MS(70) == 70000u);
+        TEST_ASSERT(TICKMS_SEC_TO_MS(4294967u) == 4294967000u);
+        TEST_ASSERT(TICKMS_SEC_TO_MS(4294968u) == UINT32_MAX);
+        TEST_ASSERT(TICKMS_SEC_TO_MS(UINT32_MAX) == UINT32_MAX);
 }
 
 TEST_CASE(test_tickms_init_null_start)
