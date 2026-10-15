@@ -46,10 +46,6 @@
 #ifndef TICKMS_H_
 #define TICKMS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* ================ INCLUDES ================================================ */
 
 #include <limits.h>
@@ -688,9 +684,5 @@ tickms_current_sec(void)
         const uint64_t ms = (uint64_t)current * (uint64_t)TICKMS_MS_PER_TICK;
         return (uint32_t)(ms / (uint64_t)TICKMS_MS_PER_SEC);
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* TICKMS_H_ */
