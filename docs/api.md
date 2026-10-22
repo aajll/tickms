@@ -149,16 +149,16 @@ static const tickms_tick_t debounce_ticks = TICKMS_MS_TO_TICKS(50u);
 <!-- snippet: skip -->
 ```c
 #define TICKMS_VERSION_MAJOR 1
-#define TICKMS_VERSION_MINOR 3
+#define TICKMS_VERSION_MINOR 4
 #define TICKMS_VERSION_PATCH 0
-#define TICKMS_VERSION "1.3.0"
+#define TICKMS_VERSION "1.4.0"
 ```
 
 `TICKMS_VERSION_NUMBER` is `MAJOR * 10000 + MINOR * 100 + PATCH` as a `long`, so it holds any version where `int` is 16 bits. Compare it in the preprocessor to require a minimum release:
 
 ```c
-#if TICKMS_VERSION_NUMBER < 10300L
-#error "tickms 1.3.0 or later is required"
+#if TICKMS_VERSION_NUMBER < 10400L
+#error "tickms 1.4.0 or later is required"
 #endif
 ```
 

@@ -72,9 +72,9 @@
 /* cppcheck-suppress-begin misra-c2012-2.5 ; @deviation Public version macros
  * for consumer diagnostics and #if checks; the library does not use them. */
 #define TICKMS_VERSION_MAJOR  1
-#define TICKMS_VERSION_MINOR  3
+#define TICKMS_VERSION_MINOR  4
 #define TICKMS_VERSION_PATCH  0
-#define TICKMS_VERSION        "1.3.0"
+#define TICKMS_VERSION        "1.4.0"
 #define TICKMS_VERSION_STRING TICKMS_VERSION
 #define TICKMS_VERSION_NUMBER                                                  \
         ((TICKMS_VERSION_MAJOR * 10000L) + (TICKMS_VERSION_MINOR * 100L)       \
