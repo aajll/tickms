@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 cc = meson.get_compiler('c')
 python = find_program('python3')
 
